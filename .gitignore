@@ -1,0 +1,11 @@
+*.swp
+*.OUT
+*.out
+*.GNN
+*.gain
+*.CR
+*.bas
+*.BAS
+*.INP
+README.html
+__pycache__
