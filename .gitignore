@@ -7,6 +7,15 @@
 *.bas
 *.BAS
 *.INP
+*.nout
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.out
 README.html
 __pycache__
 .coverage
+*.hacked
+old
