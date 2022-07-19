@@ -23,15 +23,19 @@ make the mininec code work harder because it cannot use the thin wire
 assumptions. Another test is for the thin wire case. Also added are the
 inverted-L and the T antenna from the original Mininec reports. All
 these may also serve as examples.  Tests currently cover all except for
-two statements, one of them the line after::
+the line after::
 
  if __name__ == '__main__':
 
-For the second one in ``compute_impedance_matrix`` near the end (as of
-this writing line 1367) I've not yet found a test case. I've not yet run
-the current tests through the basic interpreter with a breakpoint on
-that statement in Basic. It may very well be that this is still a bug
-and that it is not reachable in the current Python code.
+There was a second line that was flagged as not covered by the
+``pytest`` framework. This is a ``continue`` statement in
+``compute_impedance_matrix`` near the end (as of this writing line 1377).
+This looks like a bug in the test framework or in Python: When I set a
+breakpoint in the python debugger on the continue statement, the
+breakpoint is never reached. When I put an assignment statement before
+the continue statement, the continue statement is reported as covered by
+the tests *and* when I set a breakpoint it is reached. I've `reported
+this as a bug in the pytest project`_ and `as a bug in python`_.
 
 For all the test examples it was carefully verified that the results are
 close to the original results in Basic (see `Running examples in Basic`_
@@ -51,7 +55,37 @@ regression tests. The ``.pym`` files in the ``test`` directory are the
 command-line arguments to recreate the ``.pout`` files with
 ``mininec.py``.
 
-Note that the current code is still hard to understand |--| it's the
+In his thesis [5]_, Zeineddin investigates numerical instabilities when
+comparing near and far field. He solves this by doing certain
+computations for the near field in double precision arithmetics.
+I've tried to replicate these experiments and the numerical
+instabilities are reproduceable in the Basic version. In the Python
+version the instabilities are not present (because everything is in
+double precision). But the absolute field values computed in Python are
+lower than the ones reported by Zeineddin (and the Basic code *does*
+reproduce Zeineddins values).
+
+It doesn't look like there is a problem in the computations of the
+currents in the Python code, the computed currents are lower than in
+Basic which leads to lower field values. But the computed impedance
+matrix when comparing both versions has very low error, see the test
+``test_matrix_fill_ohio_example`` in ``test/test_mininec.py`` and the
+routine ``plot_z_errors`` to plot the errors (in percent) in
+``test/ohio.py``. Compared to the values computed by NEC [5]_, the Basic
+code produces slightly higher values for near and far field while the
+Python code produces slightly lower values than NEC. I've not tried to
+simulate this in NEC yet.
+
+You can find the files in
+``test/ohio*`` (the thesis was at Ohio University). This time there is a
+python script ``ohio.py`` to compute the near and far field values
+without recomputing the impedance matrix. This script can show the near
+and far field values in a plot and the difference in a second plot.
+There are two distances for which these are computed, so the code
+produces four plots. There is a second script to plot the Basic near and
+far field differences ``plot_bas_ohio.py``.
+
+The current Python code is still hard to understand |--| it's the
 result of a line-by-line translation from Basic, especially where I
 didn't (yet) understand the intention of the code. The same holds for
 Variable names which might not (yet) reflect the intention of the code.
@@ -181,7 +215,7 @@ You can run `pcbasic`_ with the command-line option ``--input=`` to specify
 an input file. Note that the input file has to be converted to carriage
 return line endings (no newlines). I've described how I'm debugging the
 Basic code using the Python debugger in a `contribution to pcbasic`_,
-the file can be found `in my pcbasic fork`_ on github.
+this has been moved to the `pcbasic wiki`_.
 
 In the file ``debug-basic.txt`` you can find my notes on how to debug
 mininec using the python debugger. This is more or less a random
@@ -199,8 +233,8 @@ the two links I've given contain the same code.
 .. _`pcbasic`: https://github.com/robhagemans/pcbasic
 .. _`Debian`: https://packages.debian.org/stable/python3-pcbasic
 .. _`contribution to pcbasic`: https://github.com/robhagemans/pcbasic/pull/183
-.. _`in my pcbasic fork`:
-    https://github.com/schlatterbeck/pcbasic/blob/pydebug/debugging.rst
+.. _`pcbasic wiki`:
+    https://github.com/robhagemans/pcbasic/wiki/Debugging-Basic-with-the-Python-Debugger
 
 .. [1] Alfredo J. Julian, James C. Logan, and John W. Rockway.
     Mininec: A mini-numerical electromagnetics code. Technical Report
@@ -219,8 +253,17 @@ the two links I've given contain the same code.
     of Standards, 1972.
 .. [4] Cecil Hastings, Jr. Approximations for Digital Computers.
     Princeton University Press, 1955.
+.. [5] Rafik Paul Zeineddin. Numerical electromagnetics codes: Problems,
+    solutions and applications. Master’s thesis, Ohio University, March 1993.
+    Available from the `OhioLINK Electronic Theses & Dissertations Center`_
 
 .. _ADA121535: https://apps.dtic.mil/sti/pdfs/ADA121535.pdf
 .. _ADA181682: https://apps.dtic.mil/sti/pdfs/ADA181682.pdf
 .. _`numpy.linalg.solve`:
     https://numpy.org/doc/stable/reference/generated/numpy.linalg.solve.html
+.. _`OhioLINK Electronic Theses & Dissertations Center`:
+    https://etd.ohiolink.edu/apexprod/rws_etd/send_file/send?accession=ohiou1176315682
+.. _`reported this as a bug in the pytest project`:
+    https://github.com/pytest-dev/pytest/issues/10152
+.. _`as a bug in python`:
+    https://github.com/python/cpython/issues/94974
