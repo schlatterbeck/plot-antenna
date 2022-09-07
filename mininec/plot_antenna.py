@@ -159,7 +159,7 @@ class Gain_Plot:
     dpi   =  80
     fig_x = 512
     fig_y = 384
-    plot_names   = ('azimuth', 'elevation', 'plot_vswr', 'plot3d')
+    plot_names   = ('azimuth', 'elevation', 'plot_vswr', 'plot3d', 'plot_geo')
     update_names = set (('azimuth', 'elevation', 'plot3d'))
 
     def __init__ \
@@ -192,6 +192,7 @@ class Gain_Plot:
         self.title       = os.path.splitext (os.path.basename (filename)) [0]
         # This might override title
         self.gdata = {}
+        self.geo = []
         self.read_file ()
         self.frequencies = []
         for f in sorted (self.gdata):
@@ -206,10 +207,78 @@ class Gain_Plot:
         guard     = 'not set'
         delimiter = guard
         gdata     = None
-        flag      = False
+        status    = 'start'
+        wires     = []
         with open (self.filename, 'r') as f:
             for line in f:
                 line = line.strip ()
+                if  (   line.startswith ('X             Y             Z')
+                    and line.endswith ('END1 END2  NO.')
+                    ):
+                    status = 'geo'
+                    self.geo.append ([])
+                    continue
+                if  (   line.startswith ('X             Y             Z')
+                    and line.endswith ('SEGMENTS')
+                    ):
+                    status = 'wire'
+                    wires.append ([])
+                    continue
+                if  (   line.startswith ('No:       X         Y         Z')
+                    and line.endswith ('I-     I    I+   No:')
+                    ):
+                    status = 'necgeo'
+                    necidx = {}
+                    continue
+                if status != 'start' and not line:
+                    status  = 'start'
+                    continue
+                if status == 'geo':
+                    x, y, z, r, e1, e2, n = line.split ()
+                    self.geo [-1].append ([float (a) for a in (x, y, z)])
+                    continue
+                if status == 'wire':
+                    l = line.split ()
+                    wires [-1].append ([float (a) for a in l [:3]])
+                    continue
+                if status == 'necgeo':
+                    # Fixme: This should really be lambda-dependent
+                    eps = 1e-3
+                    started = False
+                    ll = line.split ()
+                    idx = int (ll [0])
+                    x, y, z, l, alpha, beta = (float (a) for a in ll [1:7])
+                    mid = np.array ([x, y, z])
+                    prev, cur, next = (int (a) for a in ll [8:11])
+                    if prev == 0 or abs (prev) > idx:
+                        self.geo.append ([])
+                        started = True
+                    elif abs (prev) != idx - 1:
+                        self.geo.append ([])
+                        a, b = necidx [abs (prev)]
+                        if prev > 0:
+                            b += 1
+                        self.geo [-1].append (self.geo [a][b])
+                        started = True
+                    necidx [idx] = (len (self.geo) - 1, len (self.geo [-1]) - 1)
+                    alpha = alpha / 180 * np.pi
+                    beta  = beta  / 180 * np.pi
+                    cos_t = np.cos (alpha)
+                    # Unit vector in direction of segment
+                    xu = cos_t * np.cos (beta)
+                    yu = cos_t * np.sin (beta)
+                    zu = np.sin (alpha)
+                    uvec = np.array ([xu, yu, zu])
+                    # startpoint is midpoint - uvec * (l / 2)
+                    st = mid - uvec * (l / 2)
+                    # endpoint   is midpoint + uvec * (l / 2)
+                    en = mid + uvec * (l / 2)
+                    if started:
+                        self.geo [-1].append (st)
+                        self.geo [-1].append (en)
+                    else:
+                        assert np.linalg.norm (self.geo [-1][-1] - st) < eps
+                        self.geo [-1].append (en)
                 if line.startswith ('FREQUENCY'):
                     f = float (line.split (':') [1].split () [0])
                     if f in self.gdata:
@@ -229,20 +298,20 @@ class Gain_Plot:
                     continue
                 # NEC2 file
                 if 'ANTENNA INPUT PARAMETERS' in line:
-                    flag = True
+                    status = 'antenna-input'
                     continue
                 # NEC2 file
-                if flag and line [0].isnumeric ():
+                if status == 'antenna-input' and line [0].isnumeric ():
                     l = line.split ()
                     assert len (l) == 11
                     a, b = (float (x) for x in l [6:8])
                     gdata.impedance = a + 1j * b
-                    flag = False
+                    status = 'start'
                     continue
                 # File might end with Ctrl-Z (DOS EOF)
                 if line.startswith ('\x1a'):
                     break
-                if flag:
+                if status == 'antenna-input':
                     continue
                 if delimiter == guard:
                     # Original Basic implementation gain output
@@ -272,6 +341,11 @@ class Gain_Plot:
                         continue
                     zen, azi, vp, hp, tot = (float (x) for x in fields [:5])
                     gdata.pattern [(zen, azi)] = tot
+        for w, g in zip (wires, self.geo):
+            if w [0] != g [0]:
+                g.insert (0, w [0])
+            if w [-1] != g [-1]:
+                g.append (w [-1])
     # end def read_file
 
     def plot (self, args, f = None):
@@ -285,14 +359,13 @@ class Gain_Plot:
 
         d = {}
         a = {}
-        names = ('azimuth', 'elevation', 'plot_vswr', 'plot3d')
         count = 0
         for name in self.plot_names:
             if getattr (args, name):
                 p = dict (projection = 'polar')
                 if name == 'plot_vswr':
                     p = {}
-                elif name == 'plot3d':
+                elif name == 'plot3d' or name == 'plot_geo':
                     p = dict (projection = '3d')
                 d [name] = p
                 a [name] = dict (arg = count + 1)
@@ -481,6 +554,25 @@ class Gain_Plot:
         ax.plot (X, Y)
     # end def plot_vswr
 
+    def plot_geo (self, name):
+        ax = self.axes [name]
+        # equal aspect ratio
+        x, y, z = np.concatenate (np.array (self.geo)).T
+        mr = [x.max () - x.min (), y.max () - y.min (), z.max () - z.min ()]
+        mr = np.array (mr) / 2
+        max_range = (max (mr))
+        mid_x = (x.max () + x.min ()) / 2
+        mid_y = (y.max () + y.min ()) / 2
+        mid_z = (z.max () + z.min ()) / 2
+        ax.set_xlim (mid_x - max_range, mid_x + max_range)
+        ax.set_ylim (mid_y - max_range, mid_y + max_range)
+        ax.set_zlim (mid_z - max_range, mid_z + max_range)
+        for g in self.geo:
+            g = np.array (g)
+            x, y, z = g.T
+            ax.plot (x, y, z)
+    # end def plot_geo
+
     # For animation:
 
     def update_display (self):
@@ -575,6 +667,11 @@ def main (argv = sys.argv [1:]):
             , action  = 'store_true'
             )
     cmd.add_argument \
+        ( '--plot-geo', '--geo'
+        , help    = 'Plot Geometry'
+        , action  = 'store_true'
+        )
+    cmd.add_argument \
         ( '--output-file'
         , help    = 'Output file, default is interactive'
         )
@@ -627,7 +724,7 @@ def main (argv = sys.argv [1:]):
 
     # Default is all
     if  (   not args.azimuth and not args.elevation
-        and not args.plot3d  and not args.plot_vswr
+        and not args.plot3d  and not args.plot_vswr and not args.plot_geo
         ):
         args.plot3d = args.elevation = args.azimuth = args.plot_vswr = True
     gp.plot (args)
