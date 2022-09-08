@@ -237,9 +237,9 @@ class Gain_Plot:
         # Compute the theta index that occurs most often over all
         # frequencies
         self.theta_maxidx = list \
-            (sorted (theta_idx, key = lambda a: theta_idx [a])) [0]
+            (sorted (theta_idx, key = lambda a: theta_idx [a])) [-1]
         self.phi_maxidx = list \
-            (sorted (phi_idx, key = lambda a: phi_idx [a])) [0]
+            (sorted (phi_idx, key = lambda a: phi_idx [a])) [-1]
         if self.outfile or len (self.gdata) == 1 or not self.with_slider:
             self.with_slider = False
         # Borrow colormap from matplotlib to use in plotly
@@ -618,7 +618,37 @@ class Gain_Plot:
             desc = '<br>'.join (self.desc [0:2] + self.desc [3:])
             # don't use fig.update_layout (title = desc) which will
             # delete title attributes
-            fig ['layout']['title']['text'] = desc
+            fig.layout.title.text = desc
+            lbl_deg = self.lbl_deg or 0
+            tickangle = 90
+            if lbl_deg > 180:
+                tickangle = -90
+            fig.layout.polar.radialaxis.tickangle = tickangle
+            fig.layout.polar.radialaxis.angle = lbl_deg
+# Trying to display 'X' and 'Y' on Azimuth plot
+# Doesn't work: This doesn't correctly scale and it seems giving
+# annotations in polar coordinates is still not possible
+#            if self.labels:
+#                fig.add_annotation \
+#                    ( xref      = 'x domain'
+#                    , yref      = 'y domain'
+#                    , x         = 0.76
+#                    , y         = 0.5
+#                    , showarrow = False
+#                    , align     = 'left'
+#                    , text      = self.labels [0]
+#                    , font      = dict (size = 18)
+#                    )
+#                fig.add_annotation \
+#                    ( xref      = 'x domain'
+#                    , yref      = 'y domain'
+#                    , x         = 0.5
+#                    , y         = 1.1
+#                    , showarrow = False
+#                    , align     = 'center'
+#                    , text      = self.labels [1]
+#                    , font      = dict (size = 18)
+#                    )
             self.show_plotly (fig, name)
     # end def polarplot_plotly
 
