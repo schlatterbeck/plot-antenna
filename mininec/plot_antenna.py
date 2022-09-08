@@ -282,6 +282,61 @@ class Gain_Plot:
         return d
     # end def plotly_polar_default
 
+    @property
+    def plotly_line_default (self):
+        d = dict \
+            ( layout = dict
+                ( showlegend = True
+                , colorway   = self.colormap
+                , xaxis = dict
+                    ( linecolor = "#B0B0B0"
+                    , gridcolor = "white"
+                    )
+                , yaxis = dict
+                    ( linecolor = "#B0B0B0"
+                    , gridcolor = "white"
+                    )
+                , paper_bgcolor = 'white'
+                , plot_bgcolor  = 'white'
+                )
+            )
+        return d
+    # end def plotly_line_default
+
+    @property
+    def plotly_3d_default (self):
+        # Hmm: How to set scaleanchor? Used to couple ratio of axes
+        # constrain and constraintoward  need also to be set
+        # Hmm, rangemode (one of nonnegative, tozero, normal) does nothing
+        # Ah: This applies only if we do not specify an explicit range
+        d = dict \
+            ( layout = dict
+                ( showlegend    = True
+                , colorway      = self.colormap
+                , paper_bgcolor = 'white'
+                , plot_bgcolor  = 'white'
+                , scene = dict
+                    ( xaxis = dict
+                        ( linecolor      = "#B0B0B0"
+                        , gridcolor      = "#B0B0B0"
+                        , showbackground = False
+                        )
+                    , yaxis = dict
+                        ( linecolor      = "#B0B0B0"
+                        , gridcolor      = "#B0B0B0"
+                        , showbackground = False
+                        )
+                    , zaxis = dict
+                        ( linecolor      = "#B0B0B0"
+                        , gridcolor      = "#B0B0B0"
+                        , showbackground = False
+                        )
+                    )
+                )
+            )
+        return d
+    # end def plotly_3d_default
+
     def read_file (self):
         guard     = 'not set'
         delimiter = guard
@@ -715,7 +770,7 @@ class Gain_Plot:
             surf.set_alpha (not self.wireframe)
         self.gui_objects [name] = {}
         self.gui_objects [name]['data'] = surf
-    # end def plot3d_gains
+    # end def plot3d_matplotlib
 
     def prepare_vswr (self):
         z0 = self.impedance
@@ -744,6 +799,7 @@ class Gain_Plot:
         df ['Frequency'] = X
         df ['VSWR'] = Y
         fig = px.line (df, x="Frequency", y="VSWR")
+        fig.update (self.plotly_line_default)
         self.show_plotly (fig, name)
     # end def plot_vswr_plotly
 
@@ -764,6 +820,7 @@ class Gain_Plot:
     def plot_geo_plotly (self, name):
         xr, yr, zr = self.plot_geo_prepare_maxima ()
         fig = px.line_3d ()
+        fig.update (self.plotly_3d_default)
         # We may want to draw everything in the same color and
         # remove the individual scatter3d from the legend
         # but then, maybe not
@@ -772,15 +829,12 @@ class Gain_Plot:
             d = dict (mode = 'lines', connectgaps = False)
             d ['x'], d ['y'], d ['z'] = g.T
             fig.add_scatter3d (**d)
-        # Hmm: How to set scaleanchor? Used to couple ratio of axes
-        # constrain and constraintoward  need also to be set
-        # Hmm, rangemode (one of nonnegative, tozero, normal) does nothing
-        # Ah: This applies only if we do not specify an explicit range
-        fig.update_layout \
-            ( scene = dict
+        fig.layout.scene.update \
+            ( dict
                 ( xaxis = dict (range = xr)
                 , yaxis = dict (range = yr)
                 , zaxis = dict (range = zr)
+                #, domain = dict (x = [0.0, 0.5], y = [0.0, 0.5]) ??
                 )
             )
         self.show_plotly (fig, name)
