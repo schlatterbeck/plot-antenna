@@ -3,6 +3,7 @@
 import sys
 import os
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from argparse import ArgumentParser
@@ -10,6 +11,7 @@ from matplotlib import cm, __version__ as matplotlib_version, rcParams
 from matplotlib.widgets import Slider
 try:
     import plotly.express as px
+    import plotly.graph_objects as go
     import pandas         as pd
 except ImportError:
     px = None
@@ -128,41 +130,50 @@ class Gain_Data:
     # end def compute
 
     def azimuth_gains (self, scaler):
-        gains = scaler.scale (self.maxg, self.gains)
-        return gains [self.theta_maxidx]
+        g = self.gains [self.parent.theta_maxidx]
+        gains = scaler.scale (self.parent.maxg, g)
+        return gains, g
     # end def azimuth_gains
 
     def azimuth_text (self, scaler):
         desc = self.desc.copy ()
         desc.insert (0, 'Azimuth Pattern')
         desc.append ('Scaling: %s' % scaler.title)
-        desc.append ('Elevation: %.2f°' % (90 - self.theta_max))
+        desc.append \
+            ( 'Elevation: %.2f°'
+            % (90 - self.thetas_d [self.parent.theta_maxidx])
+            )
         return desc
     # end def azimuth_text
 
     def elevation_gains (self, scaler):
-        gains = scaler.scale (self.maxg, self.gains)
-        gains1 = gains.T [self.phi_maxidx].T
+        gains1 = self.gains.T [self.parent.phi_maxidx].T
         # Find index of the other side of the azimuth
         pmx = self.phis.shape [0] - self.phis.shape [0] % 2
-        idx = (self.phi_maxidx + pmx // 2) % pmx
-        assert idx != self.phi_maxidx
+        idx = (self.parent.phi_maxidx + pmx // 2) % pmx
+        assert idx != self.parent.phi_maxidx
         eps = 1e-9
         phis = self.phis
-        assert abs (phis [idx] - phis [self.phi_maxidx]) - np.pi < eps
-        gains2 = gains.T [idx].T
-        return np.append (gains1, np.flip (gains2))
+        assert abs (phis [idx] - phis [self.parent.phi_maxidx]) - np.pi < eps
+        gains2 = self.gains.T [idx].T
+        g = np.append (gains1, np.flip (gains2))
+        gains = scaler.scale (self.parent.maxg, g)
+        return gains, g
     # end def elevation_gains
 
     def elevation_text (self, scaler):
         desc = self.desc.copy ()
         desc.insert (0, 'Elevation Pattern')
         desc.append ('Scaling: %s' % scaler.title)
+        desc.append \
+            ( 'Azimuth: %.2f°'
+            % ((self.phis_d [self.parent.phi_maxidx] - 90) % 360)
+            )
         return desc
     # end def elevation_text
 
     def plot3d_gains (self, scaler):
-        gains  = scaler.scale (self.maxg, self.gains)
+        gains  = scaler.scale (self.parent.maxg, self.gains)
         P, T   = np.meshgrid (self.phis, self.thetas)
         X = np.cos (P) * np.sin (T) * gains
         Y = np.sin (P) * np.sin (T) * gains
@@ -173,14 +184,15 @@ class Gain_Data:
 # end class Gain_Data
 
 class Gain_Plot:
-    dpi   =  80
     fig_x = 512
     fig_y = 384
     plot_names   = ('azimuth', 'elevation', 'plot_vswr', 'plot3d', 'plot_geo')
     update_names = set (('azimuth', 'elevation', 'plot3d'))
 
+
     def __init__ (self, args):
         self.args        = args
+        self.dpi         = args.dpi
         self.filename    = args.filename
         self.outfile     = args.output_file
         self.f           = None
@@ -207,13 +219,68 @@ class Gain_Plot:
         self.geo = []
         self.read_file ()
         self.frequencies = []
+        self.maxg = None
+        theta_idx = {}
+        phi_idx   = {}
         for f in sorted (self.gdata):
             gdata = self.gdata [f]
             gdata.compute ()
+            if gdata.theta_maxidx not in theta_idx:
+                theta_idx [gdata.theta_maxidx] = 0
+            theta_idx [gdata.theta_maxidx] += 1
+            if gdata.phi_maxidx not in phi_idx:
+                phi_idx [gdata.phi_maxidx] = 0
+            phi_idx [gdata.phi_maxidx] += 1
+            if self.maxg is None or self.maxg < gdata.maxg:
+                self.maxg = gdata.maxg
             self.frequencies.append (f)
+        # Compute the theta index that occurs most often over all
+        # frequencies
+        self.theta_maxidx = list \
+            (sorted (theta_idx, key = lambda a: theta_idx [a])) [0]
+        self.phi_maxidx = list \
+            (sorted (phi_idx, key = lambda a: phi_idx [a])) [0]
         if self.outfile or len (self.gdata) == 1 or not self.with_slider:
             self.with_slider = False
+        # Borrow colormap from matplotlib to use in plotly
+        self.colormap = []
+        for cn in mcolors.TABLEAU_COLORS:
+            self.colormap.append (mcolors.TABLEAU_COLORS [cn])
     # end def __init__
+
+    @property
+    def plotly_polar_default (self):
+        d = dict \
+            ( layout = dict
+                ( showlegend = True
+                , colorway   = self.colormap
+                , polar = dict
+                    ( angularaxis = dict
+                        ( rotation  = 0
+                        , direction = 'counterclockwise'
+                        , dtick     = 15
+                        , linecolor = "#B0B0B0"
+                        , gridcolor = "#B0B0B0"
+                        )
+                    , radialaxis = dict
+                        ( tickmode  = 'array'
+                        , tickvals  = self.scaler.tick_values
+                        , ticktext  = self.scaler.tick_text
+                        , linecolor = "#B0B0B0"
+                        , gridcolor = "#B0B0B0"
+                        )
+                    , bgcolor = '#FFFFFF'
+                    )
+                , title = dict
+                    ( font = dict
+                        ( family = "Helvetica"
+                        , color  = "#010101"
+                        )
+                    )
+                )
+            )
+        return d
+    # end def plotly_polar_default
 
     def read_file (self):
         guard     = 'not set'
@@ -386,12 +453,26 @@ class Gain_Plot:
                         % locals ()
                         )
                 else:
-                    method (name)
+                    if name in ('azimuth', 'elevation'):
+                        self.plotly_lastfig  = False
+                        self.plotly_firstfig = True
+                        self.plotly_polarfig = go.Figure \
+                            (** self.plotly_polar_default)
+                        for f in self.frequencies:
+                            self.frequency = f
+                            self.cur_freq  = f
+                            self.data = self.gdata [f]
+                            if f == self.frequencies [-1]:
+                                self.plotly_lastfig = True
+                            method (name)
+                            self.plotly_firstfig = False
+                    else:
+                        method (name)
     # end def plot_plotly
 
     def plot_matplotlib (self, f):
         dpi  = self.dpi
-        x, y = self.fig_x, self.fig_y
+        x, y = np.array ([self.fig_x, self.fig_y]) / 80 * dpi
 
         d = {}
         a = {}
@@ -479,9 +560,10 @@ class Gain_Plot:
 
     def azimuth (self, name):
         self.desc = self.data.azimuth_text (self.scaler)
-        self.lbl_deg = (self.data.phi_max - 90) % 360
+        pm = self.data.phis_d [self.phi_maxidx]
+        self.lbl_deg = (pm - 90) % 360
         self.labels  = 'XY'
-        self.polargains = self.data.azimuth_gains (self.scaler)
+        self.polargains, self.unscaled = self.data.azimuth_gains (self.scaler)
         self.angles = (self.data.phis - np.pi / 2)
         self.polarplot (name)
     # end def azimuth
@@ -498,9 +580,9 @@ class Gain_Plot:
             But second half must (both) be flipped to avoid crossover
         """
         self.desc = self.data.elevation_text (self.scaler)
-        self.lbl_deg  = 90 - self.data.theta_max
+        self.lbl_deg  = 90 - self.data.thetas_d [self.theta_maxidx]
         self.labels   = None
-        self.polargains = self.data.elevation_gains (self.scaler)
+        self.polargains, self.unscaled = self.data.elevation_gains (self.scaler)
         thetas = self.data.thetas
         p2 = np.pi / 2
         self.angles = np.append (p2 - thetas, np.flip (p2 + thetas))
@@ -519,17 +601,25 @@ class Gain_Plot:
     # end def polarplot
 
     def polarplot_plotly (self, name):
-        df = pd.DataFrame ()
-        df ['polargains'] = self.polargains
-        df ['theta']      = self.angles / np.pi * 180
-        fig = px.line_polar (df, theta = 'theta', r = 'polargains')
-        fig.update_polars (angularaxis_rotation = 0)
-        fig.update_polars (angularaxis_direction = 'counterclockwise')
-        fig.update_polars (angularaxis_dtick = 15)
-        fig.update_polars (radialaxis_tickmode = 'array')
-        fig.update_polars (radialaxis_tickvals = self.scaler.tick_values)
-        fig.update_polars (radialaxis_ticktext = self.scaler.tick_text)
-        self.show_plotly (fig, name)
+        fig = self.plotly_polarfig
+        df = dict \
+            ( r       = self.polargains
+            , theta   = self.angles / np.pi * 180
+            , name    = "f=%.3f MHz" % self.frequency
+            , mode    = 'lines'
+            , visible = True if self.plotly_firstfig else 'legendonly'
+            , text    = ['%.2f dBi (%.2f dB)' % (u, u - self.maxg)
+                         for u in self.unscaled
+                        ]
+            , hovertemplate = 'gain: %{text}<br>\u03b8: %{theta}'
+            )
+        fig.add_trace (go.Scatterpolar (**df))
+        if self.plotly_lastfig:
+            desc = '<br>'.join (self.desc [0:2] + self.desc [3:])
+            # don't use fig.update_layout (title = desc) which will
+            # delete title attributes
+            fig ['layout']['title']['text'] = desc
+            self.show_plotly (fig, name)
     # end def polarplot_plotly
 
     def polarplot_matplotlib (self, name):
@@ -772,6 +862,12 @@ def main (argv = sys.argv [1:]):
         ( '--azimuth'
         , help    = 'Do an azimuth plot'
         , action  = 'store_true'
+        )
+    cmd.add_argument \
+        ( '--dpi'
+        , help    = 'Resolution for matplotlib, default = %(default)s'
+        , type    = int
+        , default = 80
         )
     cmd.add_argument \
         ( '--elevation'
