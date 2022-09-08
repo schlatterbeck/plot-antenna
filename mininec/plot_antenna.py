@@ -8,15 +8,32 @@ from mpl_toolkits.mplot3d import Axes3D
 from argparse import ArgumentParser
 from matplotlib import cm, __version__ as matplotlib_version, rcParams
 from matplotlib.widgets import Slider
+try:
+    import plotly.express as px
+    import pandas         as pd
+except ImportError:
+    px = None
 
 matplotlib_version_float = float ('.'.join (matplotlib_version.split ('.')[:2]))
 
 class Scaler:
 
+    @property
+    def tick_values (self):
+        g = self.ticks
+        return self.scale (0, g)
+    # end def tick_values
+
+    @property
+    def tick_text (self):
+        g = self.ticks
+        return [''] + [('%d' % i) for i in g [1:]]
+    # end def tick_text
+
     def set_ticks (self, ax):
         g = self.ticks
-        ax.set_rticks (self.scale (0, g))
-        ax.set_yticklabels ([''] + [('%d' % i) for i in g [1:]], ha = 'center')
+        ax.set_rticks (self.tick_values)
+        ax.set_yticklabels (self.tick_text, ha = 'center')
     # end def set_ticks
 
 # end class Scaler
@@ -162,26 +179,20 @@ class Gain_Plot:
     plot_names   = ('azimuth', 'elevation', 'plot_vswr', 'plot3d', 'plot_geo')
     update_names = set (('azimuth', 'elevation', 'plot3d'))
 
-    def __init__ \
-        ( self, filename
-        , outfile     = None
-        , with_slider = True
-        , wireframe   = False
-        , scaling     = 'arrl'
-        , scale_db    = -50
-        ):
-        self.filename    = filename
-        self.outfile     = outfile
+    def __init__ (self, args):
+        self.args        = args
+        self.filename    = args.filename
+        self.outfile     = args.output_file
         self.f           = None
-        self.with_slider = with_slider
-        self.wireframe   = wireframe
+        self.with_slider = args.with_slider
+        self.wireframe   = args.wireframe
         self.scalers     = dict \
-            ( linear_db      = Linear_dB_Scaler (scale_db)
+            ( linear_db      = Linear_dB_Scaler (args.scaling_mindb)
             , linear_voltage = scale_linear_voltage
             , linear         = scale_linear
             , arrl           = scale_arrl
             )
-        self.scaler = self.scalers [scaling]
+        self.scaler = self.scalers [args.scaling_method]
         self.cur_scaler = self.scaler
 
         # Discrete values for slider are available only in later
@@ -189,7 +200,8 @@ class Gain_Plot:
         if matplotlib_version_float < 3.5:
             self.with_slider = False
         # Default title from filename
-        self.title       = os.path.splitext (os.path.basename (filename)) [0]
+        self.title       = os.path.splitext \
+            (os.path.basename (args.filename)) [0]
         # This might override title
         self.gdata = {}
         self.geo = []
@@ -348,12 +360,36 @@ class Gain_Plot:
                 g.append (w [-1])
     # end def read_file
 
-    def plot (self, args, f = None):
+    def plot (self, f = None):
         if f is None:
             f = next (iter (self.gdata))
         self.frequency = f
         self.cur_freq  = f
-        self.impedance = args.system_impedance
+        self.impedance = self.args.system_impedance
+        if self.args.export_html or self.args.show_in_browser:
+            self.plot_plotly (f)
+        else:
+            self.plot_matplotlib (f)
+    # end def plot
+
+    def plot_plotly (self, f):
+        m = {}
+        self.data = self.gdata [f]
+        for name in self.plot_names:
+            if getattr (self.args, name):
+                method = getattr (self, name, None)
+                if method is None:
+                    method = getattr (self, name + '_plotly')
+                if method is None:
+                    print \
+                        ( 'Warning: No method for "%(name)s for plotly'
+                        % locals ()
+                        )
+                else:
+                    method (name)
+    # end def plot_plotly
+
+    def plot_matplotlib (self, f):
         dpi  = self.dpi
         x, y = self.fig_x, self.fig_y
 
@@ -361,7 +397,7 @@ class Gain_Plot:
         a = {}
         count = 0
         for name in self.plot_names:
-            if getattr (args, name):
+            if getattr (self.args, name):
                 p = dict (projection = 'polar')
                 if name == 'plot_vswr':
                     p = {}
@@ -404,7 +440,9 @@ class Gain_Plot:
             self.offset = np.array \
                 ([((arg - 1) % 2), ((arg - 1) // 2)]) * .5
             self.axes [name] = fig.add_subplot (*args, arg, **kw)
-            method = getattr (self, name)
+            method = getattr (self, name, None)
+            if method is None:
+                method = getattr (self, name + '_matplotlib')
             method (name)
         self.freq_slider = None
         # Make a horizontal slider to control the frequency.
@@ -437,7 +475,7 @@ class Gain_Plot:
             fig.savefig (self.outfile)
         else:
             plt.show ()
-    # end def plot
+    # end def plot_matplotlib
 
     def azimuth (self, name):
         self.desc = self.data.azimuth_text (self.scaler)
@@ -474,6 +512,27 @@ class Gain_Plot:
     # end def format_polar_coord
 
     def polarplot (self, name):
+        if self.args.export_html or self.args.show_in_browser:
+            self.polarplot_plotly (name)
+        else:
+            self.polarplot_matplotlib (name)
+    # end def polarplot
+
+    def polarplot_plotly (self, name):
+        df = pd.DataFrame ()
+        df ['polargains'] = self.polargains
+        df ['theta']      = self.angles / np.pi * 180
+        fig = px.line_polar (df, theta = 'theta', r = 'polargains')
+        fig.update_polars (angularaxis_rotation = 0)
+        fig.update_polars (angularaxis_direction = 'counterclockwise')
+        fig.update_polars (angularaxis_dtick = 15)
+        fig.update_polars (radialaxis_tickmode = 'array')
+        fig.update_polars (radialaxis_tickvals = self.scaler.tick_values)
+        fig.update_polars (radialaxis_ticktext = self.scaler.tick_text)
+        self.show_plotly (fig, name)
+    # end def polarplot_plotly
+
+    def polarplot_matplotlib (self, name):
         if name not in self.gui_objects:
             self.gui_objects [name] = {}
         ax = self.axes [name]
@@ -496,9 +555,9 @@ class Gain_Plot:
         # Might add color and size labelcolor='r' labelsize = 8
         ax.tick_params (axis = 'y', rotation = 'auto')
         ax.format_coord = self.format_polar_coord
-    # end def polarplot
+    # end def polarplot_matplotlib
 
-    def plot3d (self, name):
+    def plot3d_matplotlib (self, name):
         if name in self.gui_objects and self.gui_objects [name]:
             self.gui_objects [name]['data'].remove ()
             self.gui_objects [name] = {}
@@ -536,10 +595,9 @@ class Gain_Plot:
             surf.set_alpha (not self.wireframe)
         self.gui_objects [name] = {}
         self.gui_objects [name]['data'] = surf
-    # end def plot3d
+    # end def plot3d_gains
 
-    def plot_vswr (self, name):
-        ax = self.axes [name]
+    def prepare_vswr (self):
         z0 = self.impedance
         X  = []
         Y  = []
@@ -549,29 +607,92 @@ class Gain_Plot:
             rho = np.abs ((z - z0) / (z + z0))
             X.append (f)
             Y.append ((1 + rho) / (1 - rho))
+        return X, Y
+    # end def prepare_vswr
+
+    def plot_vswr_matplotlib (self, name):
+        ax = self.axes [name]
         ax.set_xlabel ('Frequency')
         ax.set_ylabel ('VSWR')
+        X, Y = self.prepare_vswr ()
         ax.plot (X, Y)
-    # end def plot_vswr
+    # end def plot_vswr_matplotlib
 
-    def plot_geo (self, name):
-        ax = self.axes [name]
-        # equal aspect ratio
-        x, y, z = np.concatenate (np.array (self.geo)).T
+    def plot_vswr_plotly (self, name):
+        X, Y = self.prepare_vswr ()
+        df = pd.DataFrame ()
+        df ['Frequency'] = X
+        df ['VSWR'] = Y
+        fig = px.line (df, x="Frequency", y="VSWR")
+        self.show_plotly (fig, name)
+    # end def plot_vswr_plotly
+
+    def plot_geo_prepare_maxima (self):
+        x, y, z = np.concatenate (self.geo).T
         mr = [x.max () - x.min (), y.max () - y.min (), z.max () - z.min ()]
         mr = np.array (mr) / 2
-        max_range = (max (mr))
         mid_x = (x.max () + x.min ()) / 2
         mid_y = (y.max () + y.min ()) / 2
         mid_z = (z.max () + z.min ()) / 2
-        ax.set_xlim (mid_x - max_range, mid_x + max_range)
-        ax.set_ylim (mid_y - max_range, mid_y + max_range)
-        ax.set_zlim (mid_z - max_range, mid_z + max_range)
+        max_range = max (mr)
+        xl, xu = (mid_x - max_range, mid_x + max_range)
+        yl, yu = (mid_y - max_range, mid_y + max_range)
+        zl, zu = (mid_z - max_range, mid_z + max_range)
+        return (xl, xu), (yl, yu), (zl, zu)
+    # end def plot_geo_prepare_maxima
+
+    def plot_geo_plotly (self, name):
+        xr, yr, zr = self.plot_geo_prepare_maxima ()
+        fig = px.line_3d ()
+        # We may want to draw everything in the same color and
+        # remove the individual scatter3d from the legend
+        # but then, maybe not
+        for n, g in enumerate (self.geo):
+            g = np.array (g)
+            d = dict (mode = 'lines', connectgaps = False)
+            d ['x'], d ['y'], d ['z'] = g.T
+            fig.add_scatter3d (**d)
+        # Hmm: How to set scaleanchor? Used to couple ratio of axes
+        # constrain and constraintoward  need also to be set
+        # Hmm, rangemode (one of nonnegative, tozero, normal) does nothing
+        # Ah: This applies only if we do not specify an explicit range
+        fig.update_layout \
+            ( scene = dict
+                ( xaxis = dict (range = xr)
+                , yaxis = dict (range = yr)
+                , zaxis = dict (range = zr)
+                )
+            )
+        self.show_plotly (fig, name)
+    # end def plot_geo_plotly
+
+    def plot_geo_matplotlib (self, name):
+        ax = self.axes [name]
+        # equal aspect ratio
+        xr, yr, zr = self.plot_geo_prepare_maxima ()
+        ax.set_xlim (*xr)
+        ax.set_ylim (*yr)
+        ax.set_zlim (*zr)
         for g in self.geo:
             g = np.array (g)
             x, y, z = g.T
             ax.plot (x, y, z)
-    # end def plot_geo
+    # end def plot_geo_matplotlib
+
+    def show_plotly (self, fig, name):
+        """ We can pass a config option into fig.show and fig.write_html,
+            allowing scroll seems to be the default for 3d view.
+            At some point we may want to set different config options
+            for different plots.
+        """
+        config = dict (displaylogo = False)
+
+        if self.args.export_html:
+            fn = self.args.export_html + '-' + name
+            fig.write_html (fn, config = config)
+        else:
+            fig.show (config = config)
+    # end def show_plotly
 
     # For animation:
 
@@ -584,7 +705,7 @@ class Gain_Plot:
             gdata = self.gdata [self.frequency]
             if name == 'plot3d':
                 self.data = gdata
-                self.plot3d ('plot3d')
+                self.plot3d_matplotlib ('plot3d')
             else:
                 gains = getattr (gdata, name + '_gains')(self.scaler)
                 data_obj.set_ydata (gains)
@@ -708,26 +829,29 @@ def main (argv = sys.argv [1:]):
         , help    = 'Show 3d plot as a wireframe (not solid)'
         , action  = 'store_true'
         )
+    if px is not None:
+        cmd.add_argument \
+            ( "-H", "--export-html"
+            , help    = "Filename-prefix to export graphics as html, "
+                        "type of graphics (azimuth, elevation, ..) is appended"
+            )
+        cmd.add_argument \
+            ( "-S", "--show-in-browser"
+            , help    = "Produce a plot shown interactively in a running "
+                        "browser"
+            , action  = 'store_true'
+            )
     args = cmd.parse_args (argv)
     if not hasattr (args, 'with_slider'):
         args.with_slider = False
-    d    = dict \
-        ( filename    = args.filename
-        , with_slider = args.with_slider
-        , wireframe   = args.wireframe
-        , scaling     = args.scaling_method
-        , scale_db    = args.scaling_mindb
-        )
-    if args.output_file:
-        d ['outfile'] = args.output_file
-    gp   = Gain_Plot (**d)
+    gp   = Gain_Plot (args)
 
     # Default is all
     if  (   not args.azimuth and not args.elevation
         and not args.plot3d  and not args.plot_vswr and not args.plot_geo
         ):
         args.plot3d = args.elevation = args.azimuth = args.plot_vswr = True
-    gp.plot (args)
+    gp.plot ()
 # end def main
 
 if __name__ == '__main__':
