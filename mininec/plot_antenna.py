@@ -915,7 +915,7 @@ class Gain_Plot:
                 self.data = gdata
                 self.plot3d_matplotlib ('plot3d')
             else:
-                gains = getattr (gdata, name + '_gains')(self.scaler)
+                gains, g = getattr (gdata, name + '_gains')(self.scaler)
                 data_obj.set_ydata (gains)
                 text_obj = gui ['text']
                 text = getattr (gdata, name + '_text')(self.scaler)
