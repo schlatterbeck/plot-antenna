@@ -178,7 +178,7 @@ class Gain_Data:
         X = np.cos (P) * np.sin (T) * gains
         Y = np.sin (P) * np.sin (T) * gains
         Z = np.cos (T) * gains
-        return [gains, X, Y, Z]
+        return gains, X, Y, Z
     # end def plot3d_gains
 
 # end class Gain_Data
@@ -501,10 +501,10 @@ class Gain_Plot:
             if getattr (self.args, name):
                 method = getattr (self, name, None)
                 if method is None:
-                    method = getattr (self, name + '_plotly')
+                    method = getattr (self, name + '_plotly', None)
                 if method is None:
                     print \
-                        ( 'Warning: No method for "%(name)s for plotly'
+                        ( 'Warning: No method for "%(name)s" for plotly'
                         % locals ()
                         )
                 else:
@@ -738,19 +738,10 @@ class Gain_Plot:
             self.gui_objects [name] = {}
         ax = self.axes [name]
         gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
-        # Create cubic bounding box to simulate equal aspect ratio
-        max_range = np.array \
-            ( [ X.max () - X.min ()
-              , Y.max () - Y.min ()
-              , Z.max () - Z.min ()
-              ]
-            ).max() / 2.0
-        mid_x = (X.max () + X.min ()) * 0.5
-        mid_y = (Y.max () + Y.min ()) * 0.5
-        mid_z = (Z.max () + Z.min ()) * 0.5
-        ax.set_xlim (mid_x - max_range, mid_x + max_range)
-        ax.set_ylim (mid_y - max_range, mid_y + max_range)
-        ax.set_zlim (mid_z - max_range, mid_z + max_range)
+        xr, yr, zr = self.scene_ranges ((X, Y, Z))
+        ax.set_xlim (xr)
+        ax.set_ylim (yr)
+        ax.set_zlim (zr)
 
         ax.set_xlabel ('X')
         ax.set_ylabel ('Y')
@@ -771,6 +762,39 @@ class Gain_Plot:
         self.gui_objects [name] = {}
         self.gui_objects [name]['data'] = surf
     # end def plot3d_matplotlib
+
+    def plot3d_plotly (self, name):
+        gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
+        xr, yr, zr = self.scene_ranges ((X, Y, Z))
+        fig = px.line_3d ()
+        fig.update (self.plotly_3d_default)
+        ticktext = ['%.2f dBi (%.2f dB)' % (u + self.maxg, u)
+                    for u in self.scaler.ticks
+                   ]
+        # Ensure that the uppermost (0dB) mark is printed
+        # This may be slightly off when a pattern is very different for
+        # different frequencies
+        tickvals = self.scaler.tick_values
+        tickvals [0] = gains.max ()
+        fig.add_trace (go.Surface
+            ( x = X, y = Y, z = Z
+            , surfacecolor = gains
+            , colorscale = 'rainbow'
+            , colorbar = dict
+                ( tickvals = tickvals
+                , ticktext = ticktext
+                )
+            )
+        )
+        fig.layout.scene.update \
+            ( dict
+                ( xaxis = dict (range = xr)
+                , yaxis = dict (range = yr)
+                , zaxis = dict (range = zr)
+                )
+            )
+        self.show_plotly (fig, name)
+    # end def plot3d_plotly
 
     def prepare_vswr (self):
         z0 = self.impedance
@@ -803,22 +827,27 @@ class Gain_Plot:
         self.show_plotly (fig, name)
     # end def plot_vswr_plotly
 
-    def plot_geo_prepare_maxima (self):
-        x, y, z = np.concatenate (self.geo).T
-        mr = [x.max () - x.min (), y.max () - y.min (), z.max () - z.min ()]
-        mr = np.array (mr) / 2
+    def scene_ranges (self, matrix):
+        """ Create cubic bounding box to force equal aspect ratio
+        """
+        x, y, z = matrix
+        max_range = np.array \
+            ( [ x.max () - x.min ()
+              , y.max () - y.min ()
+              , z.max () - z.min ()
+              ]
+            ).max() / 2.0
         mid_x = (x.max () + x.min ()) / 2
         mid_y = (y.max () + y.min ()) / 2
         mid_z = (z.max () + z.min ()) / 2
-        max_range = max (mr)
-        xl, xu = (mid_x - max_range, mid_x + max_range)
-        yl, yu = (mid_y - max_range, mid_y + max_range)
-        zl, zu = (mid_z - max_range, mid_z + max_range)
-        return (xl, xu), (yl, yu), (zl, zu)
-    # end def plot_geo_prepare_maxima
+        xr = np.array ([mid_x - max_range, mid_x + max_range])
+        yr = np.array ([mid_y - max_range, mid_y + max_range])
+        zr = np.array ([mid_z - max_range, mid_z + max_range])
+        return np.array ([xr, yr, zr])
+    # end def scene_ranges
 
     def plot_geo_plotly (self, name):
-        xr, yr, zr = self.plot_geo_prepare_maxima ()
+        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T)
         fig = px.line_3d ()
         fig.update (self.plotly_3d_default)
         # We may want to draw everything in the same color and
@@ -835,6 +864,11 @@ class Gain_Plot:
                 , yaxis = dict (range = yr)
                 , zaxis = dict (range = zr)
                 #, domain = dict (x = [0.0, 0.5], y = [0.0, 0.5]) ??
+                , camera = dict
+                    ( up     = dict (x = 0,    y = 0,    z = 1)
+                    , center = dict (x = 0,    y = 0,    z = 0)
+                    , eye    = dict (x = 0.01, y = 0.01, z = 1)
+                    )
                 )
             )
         self.show_plotly (fig, name)
@@ -843,7 +877,7 @@ class Gain_Plot:
     def plot_geo_matplotlib (self, name):
         ax = self.axes [name]
         # equal aspect ratio
-        xr, yr, zr = self.plot_geo_prepare_maxima ()
+        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T)
         ax.set_xlim (*xr)
         ax.set_ylim (*yr)
         ax.set_zlim (*zr)
@@ -977,7 +1011,7 @@ def main (argv = sys.argv [1:]):
         , help    = 'Output file, default is interactive'
         )
     cmd.add_argument \
-        ( '--plot3d'
+        ( '--plot3d', '--3d', '--plot-3d'
         , help    = 'Do a 3D plot'
         , action  = 'store_true'
         )
