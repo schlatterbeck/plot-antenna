@@ -12,6 +12,7 @@ from matplotlib.widgets import Slider
 try:
     import plotly.express as px
     import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
     import pandas         as pd
 except ImportError:
     px = None
@@ -178,7 +179,17 @@ class Gain_Data:
         X = np.cos (P) * np.sin (T) * gains
         Y = np.sin (P) * np.sin (T) * gains
         Z = np.cos (T) * gains
-        return gains, X, Y, Z
+        # t must be same shape as X, Y, Z
+        t = np.stack \
+            ([ self.gains
+             , self.gains - self.parent.maxg
+             , P / np.pi * 180
+             , T / np.pi * 180
+            ], axis = -1)
+        # Workaround: plotly swaps the axes, see
+        # https://github.com/plotly/plotly.js/issues/5003
+        t = np.moveaxis (t, (0, 1, 2), (1, 0, 2))
+        return t, gains, X, Y, Z
     # end def plot3d_gains
 
 # end class Gain_Data
@@ -336,6 +347,18 @@ class Gain_Plot:
             )
         return d
     # end def plotly_3d_default
+
+    def all_gains (self):
+        xyz = None
+        for f in self.frequencies:
+            g = self.gdata [f]
+            _, _, X, Y, Z = g.plot3d_gains (self.scaler)
+            if xyz is None:
+                xyz = np.array ([X, Y, Z]).T
+            else:
+                xyz = np.concatenate ((xyz, np.array ([X, Y, Z]).T))
+        return xyz.T
+    # end def all_gains
 
     def read_file (self):
         guard     = 'not set'
@@ -508,12 +531,24 @@ class Gain_Plot:
                         % locals ()
                         )
                 else:
-                    if name in ('azimuth', 'elevation'):
+                    if name in ('azimuth', 'elevation', 'plot3d'):
                         self.plotly_lastfig  = False
                         self.plotly_firstfig = True
-                        self.plotly_polarfig = go.Figure \
-                            (** self.plotly_polar_default)
-                        for f in self.frequencies:
+                        if name == 'plot3d':
+                            self.plotly_fig = make_subplots \
+                                ( rows=1, cols=2
+                                , specs=[ [ {'type': 'surface'}
+                                          , {'type': 'xy'}
+                                          ]
+                                        ]
+                                , column_widths = [0.8, 0.2]
+                                )
+                            self.plotly_fig.update (self.plotly_3d_default)
+                        else:
+                            self.plotly_fig = go.Figure \
+                                (** self.plotly_polar_default)
+                        for n, f in enumerate (self.frequencies):
+                            self.plotly_count = n
                             self.frequency = f
                             self.cur_freq  = f
                             self.data = self.gdata [f]
@@ -656,7 +691,7 @@ class Gain_Plot:
     # end def polarplot
 
     def polarplot_plotly (self, name):
-        fig = self.plotly_polarfig
+        fig = self.plotly_fig
         df = dict \
             ( r       = self.polargains
             , theta   = self.angles / np.pi * 180
@@ -737,7 +772,7 @@ class Gain_Plot:
             self.gui_objects [name]['data'].remove ()
             self.gui_objects [name] = {}
         ax = self.axes [name]
-        gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
+        _, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         xr, yr, zr = self.scene_ranges ((X, Y, Z))
         ax.set_xlim (xr)
         ax.set_ylim (yr)
@@ -763,11 +798,27 @@ class Gain_Plot:
         self.gui_objects [name]['data'] = surf
     # end def plot3d_matplotlib
 
+    # This is injected as javascript into the figure and hooks to the
+    # (documented) legendclick. This is triggered *before* the click
+    # action is performed and turn the visibility of all traces to
+    # 'legendonly'. After that the button action is triggered and turns
+    # makes *only* the clicked-on trace visible. So now the legend
+    # buttons work like radio buttons.
+    plotly_3d_script = """
+            var myPlot = document.getElementById('{plot_id}')
+            myPlot.on ( 'plotly_legendclick'
+                      , function(clickData) {
+                         var xlen = clickData.data.length;
+                         //console.log (clickData);
+                         for (var i = 0; i < xlen; i++) {
+                            clickData.data [i].visible = 'legendonly';
+                         }
+                        }
+                      );"""
     def plot3d_plotly (self, name):
-        gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
-        xr, yr, zr = self.scene_ranges ((X, Y, Z))
-        fig = px.line_3d ()
-        fig.update (self.plotly_3d_default)
+        t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
+        xr, yr, zr = self.scene_ranges ()
+        fig = self.plotly_fig
         ticktext = ['%.2f dBi (%.2f dB)' % (u + self.maxg, u)
                     for u in self.scaler.ticks
                    ]
@@ -776,24 +827,60 @@ class Gain_Plot:
         # different frequencies
         tickvals = self.scaler.tick_values
         tickvals [0] = gains.max ()
-        fig.add_trace (go.Surface
-            ( x = X, y = Y, z = Z
-            , surfacecolor = gains
-            , colorscale = 'rainbow'
-            , colorbar = dict
-                ( tickvals = tickvals
-                , ticktext = ticktext
+        lgroup  = 'l%d' % self.plotly_count
+        visible = True if self.plotly_firstfig else 'legendonly'
+        tpl = ('gain: %{customdata[0]:.2f} dBi (%{customdata[1]:.2f} dB)<br>'
+               '\u03C6: %{customdata[2]:.2f}<br>\u03b8: %{customdata[3]:.2f}'
+              )
+
+        fig.add_trace \
+            ( go.Surface
+                ( x = X, y = Y, z = Z
+                , surfacecolor = gains
+                , colorscale   = 'rainbow'
+                , visible      = visible
+                , legendgroup  = lgroup
+                , name         = "f=%.3f MHz" % self.frequency
+                , colorbar = dict
+                    ( tickvals = tickvals
+                    , ticktext = ticktext
+                    , x = 0.85, y = 0.49
+                    , len = 1.05
+                    )
+                , customdata    = t
+                , hovertemplate = tpl
                 )
+            , row = 1, col = 1
             )
-        )
-        fig.layout.scene.update \
-            ( dict
-                ( xaxis = dict (range = xr)
-                , yaxis = dict (range = yr)
-                , zaxis = dict (range = zr)
+        fig.add_trace \
+            ( go.Scatter
+                ( dict (x = [1.], y = [1.], line = dict (color = 'white'))
+                , legendgroup = lgroup
+                , visible     = visible
+                , showlegend  = True
+                , name        = "f=%.3f MHz" % self.frequency
                 )
+            , row = 1, col = 2
             )
-        self.show_plotly (fig, name)
+        if self.plotly_lastfig:
+            fig.layout.update \
+                ( legend = dict
+                    ( itemclick       = 'toggle'
+                    , itemdoubleclick = 'toggle'
+                    )
+                , xaxis = dict
+                    ( showticklabels  = False
+                    )
+                , yaxis = dict
+                    ( showticklabels  = False
+                    )
+                ,  scene = dict
+                    ( xaxis = dict (range = xr, showticklabels = False)
+                    , yaxis = dict (range = yr, showticklabels = False)
+                    , zaxis = dict (range = zr, showticklabels = False)
+                    )
+                )
+            self.show_plotly (fig, name, script = self.plotly_3d_script)
     # end def plot3d_plotly
 
     def prepare_vswr (self):
@@ -827,9 +914,12 @@ class Gain_Plot:
         self.show_plotly (fig, name)
     # end def plot_vswr_plotly
 
-    def scene_ranges (self, matrix):
+    def scene_ranges (self, matrix = None):
         """ Create cubic bounding box to force equal aspect ratio
+            If matrix is not given, we concatenate *all* gains.
         """
+        if matrix is None:
+            matrix = self.all_gains ()
         x, y, z = matrix
         max_range = np.array \
             ( [ x.max () - x.min ()
@@ -887,19 +977,24 @@ class Gain_Plot:
             ax.plot (x, y, z)
     # end def plot_geo_matplotlib
 
-    def show_plotly (self, fig, name):
+    def show_plotly (self, fig, name, script = None):
         """ We can pass a config option into fig.show and fig.write_html,
             allowing scroll seems to be the default for 3d view.
             At some point we may want to set different config options
             for different plots.
+            Note that the script is passed as post_script to the html.
+            It is triggered after loading the figure.
         """
         config = dict (displaylogo = False)
 
+        d = {}
+        if script is not None:
+            d.update (post_script = script)
         if self.args.export_html:
             fn = self.args.export_html + '-' + name
-            fig.write_html (fn, config = config)
+            fig.write_html (fn, config = config, **d)
         else:
-            fig.show (config = config)
+            fig.show (config = config, **d)
     # end def show_plotly
 
     # For animation:
