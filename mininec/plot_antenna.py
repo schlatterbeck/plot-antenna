@@ -167,8 +167,8 @@ class Gain_Data:
         desc.insert (0, 'Elevation Pattern')
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
-            ( 'Azimuth: %.2f°'
-            % ((self.phis_d [self.parent.phi_maxidx] - 90) % 360)
+            ( 'Azimuth: %.2f° (X: 0°)'
+            % self.phis_d [self.parent.phi_maxidx]
             )
         return desc
     # end def elevation_text
@@ -184,7 +184,7 @@ class Gain_Data:
             ([ self.gains
              , self.gains - self.parent.maxg
              , P / np.pi * 180
-             , T / np.pi * 180
+             , (90 - T / np.pi * 180) % 360
             ], axis = -1)
         # Workaround: plotly swaps the axes, see
         # https://github.com/plotly/plotly.js/issues/5003
@@ -654,7 +654,7 @@ class Gain_Plot:
         self.lbl_deg = (pm - 90) % 360
         self.labels  = 'XY'
         self.polargains, self.unscaled = self.data.azimuth_gains (self.scaler)
-        self.angles = (self.data.phis - np.pi / 2)
+        self.angles = self.data.phis
         self.polarplot (name)
     # end def azimuth
 
@@ -679,11 +679,8 @@ class Gain_Plot:
         self.polarplot (name)
     # end def elevation
 
-    def format_polar_coord (self, x, y):
-        return '\u03B8=%.2f°, r=%.3f' % (x / np.pi * 180, y)
-    # end def format_polar_coord
-
     def polarplot (self, name):
+        self.angle_name  = name [0].upper () + name [1:]
         if self.args.export_html or self.args.show_in_browser:
             self.polarplot_plotly (name)
         else:
@@ -692,16 +689,17 @@ class Gain_Plot:
 
     def polarplot_plotly (self, name):
         fig = self.plotly_fig
+        nm  = self.angle_name
         df = dict \
             ( r       = self.polargains
-            , theta   = self.angles / np.pi * 180
+            , theta   = (self.angles / np.pi * 180) % 360
             , name    = "f=%.3f MHz" % self.frequency
             , mode    = 'lines'
             , visible = True if self.plotly_firstfig else 'legendonly'
             , text    = ['%.2f dBi (%.2f dB)' % (u, u - self.maxg)
                          for u in self.unscaled
                         ]
-            , hovertemplate = 'gain: %{text}<br>\u03b8: %{theta}'
+            , hovertemplate = 'gain: %%{text}<br>%s: %%{theta}' % nm
             )
         fig.add_trace (go.Scatterpolar (**df))
         if self.plotly_lastfig:
@@ -764,7 +762,10 @@ class Gain_Plot:
         self.scaler.set_ticks (ax)
         # Might add color and size labelcolor='r' labelsize = 8
         ax.tick_params (axis = 'y', rotation = 'auto')
-        ax.format_coord = self.format_polar_coord
+        an = self.angle_name
+        def format_polar_coord (x, y):
+            return '%s=%.2f°, r=%.3f' % (an, x / np.pi * 180, y)
+        ax.format_coord = format_polar_coord
     # end def polarplot_matplotlib
 
     def plot3d_matplotlib (self, name):
@@ -830,7 +831,8 @@ class Gain_Plot:
         lgroup  = 'l%d' % self.plotly_count
         visible = True if self.plotly_firstfig else 'legendonly'
         tpl = ('gain: %{customdata[0]:.2f} dBi (%{customdata[1]:.2f} dB)<br>'
-               '\u03C6: %{customdata[2]:.2f}<br>\u03b8: %{customdata[3]:.2f}'
+               'Azimuth: %{customdata[2]:.2f}° (X: 0°)<br>'
+               'Elevation: %{customdata[3]:.2f}°'
               )
 
         fig.add_trace \
@@ -986,15 +988,18 @@ class Gain_Plot:
             It is triggered after loading the figure.
         """
         config = dict (displaylogo = False)
-
         d = {}
+        if self.args.html_export_option and self.args.export_html:
+            d.update (include_plotlyjs = self.args.html_export_option)
+        if not self.args.show_plotly_logo:
+            d.update (config = config)
         if script is not None:
             d.update (post_script = script)
         if self.args.export_html:
-            fn = self.args.export_html + '-' + name
-            fig.write_html (fn, config = config, **d)
+            fn = self.args.export_html + '-' + name + '.html'
+            fig.write_html (fn, **d)
         else:
-            fig.show (config = config, **d)
+            fig.show (**d)
     # end def show_plotly
 
     # For animation:
@@ -1145,9 +1150,23 @@ def main (argv = sys.argv [1:]):
                         "type of graphics (azimuth, elevation, ..) is appended"
             )
         cmd.add_argument \
+            ( "--html-export-option"
+            , help    = "Option passed to write_html include_plotlyjs option, "
+                        "default is to include all javascript in generated "
+                        "output file. To leave out the javascript, specify "
+                        "'directory', this needs the plotly.min.js in the "
+                        "same directory as the output. See plotly docs for "
+                        "details."
+            )
+        cmd.add_argument \
             ( "-S", "--show-in-browser"
             , help    = "Produce a plot shown interactively in a running "
                         "browser"
+            , action  = 'store_true'
+            )
+        cmd.add_argument \
+            ( "--show-plotly-logo"
+            , help    = "Show plotly logo in menu"
             , action  = 'store_true'
             )
     args = cmd.parse_args (argv)
