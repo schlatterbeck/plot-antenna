@@ -49,6 +49,18 @@ class Linear_Scaler (Scaler):
         return 10 ** ((gains - max_gain) / 10)
     # end def scale
 
+    def invscale (self, v):
+        """ Test
+        >>> sc = Linear_Scaler ()
+        >>> for db in range (0, 25, 10):
+        ...     print ("%.2f" % sc.invscale (sc.scale (0, db)))
+        0.00
+        10.00
+        20.00
+        """
+        return 10 * np.log (v) / np.log (10)
+    # end def invscale
+
 # end class Linear_Scaler
 
 scale_linear = Linear_Scaler ()
@@ -61,6 +73,18 @@ class Linear_Voltage_Scaler (Scaler):
         return 10 ** ((gains - max_gain) / 20)
     # end def scale
 
+    def invscale (self, v):
+        """ Test
+        >>> sc = Linear_Voltage_Scaler ()
+        >>> for db in range (0, 25, 10):
+        ...     print ("%.2f" % sc.invscale (sc.scale (0, db)))
+        0.00
+        10.00
+        20.00
+        """
+        return 20 * np.log (v) / np.log (10)
+    # end def invscale
+
 # end class Linear_Voltage_Scaler
 
 scale_linear_voltage = Linear_Voltage_Scaler ()
@@ -72,6 +96,19 @@ class ARRL_Scaler (Scaler):
     def scale (self, max_gain, gains):
         return (1 / 0.89) ** ((gains - max_gain) / 2)
     # end def scale
+
+    def invscale (self, v):
+        """ Test
+        >>> sc = ARRL_Scaler ()
+        >>> for db in range (0, 35, 10):
+        ...     print ("%.2f" % sc.invscale (sc.scale (0, db)))
+        0.00
+        10.00
+        20.00
+        30.00
+        """
+        return np.log (v) / np.log (1 / 0.89) * 2
+    # end def invscale
 
 # end class ARRL_Scaler
 
@@ -93,6 +130,21 @@ class Linear_dB_Scaler (Scaler):
             / -self.min_db
             )
     # end def scale
+
+    def invscale (self, v):
+        """ Test
+        >>> sc = Linear_dB_Scaler ()
+        >>> for db in range (0, -sc.min_db + 1, 10):
+        ...     print ("%.2f" % sc.invscale (sc.scale (0, db)))
+        0.00
+        10.00
+        20.00
+        30.00
+        40.00
+        50.00
+        """
+        return v * -self.min_db + self.min_db
+    # end def invscale
 
 # end class Linear_dB_Scaler
 
@@ -125,7 +177,6 @@ class Gain_Data:
         self.phi_max   = self.phis_d   [self.phi_maxidx]
         self.desc      = ['Title: %s' % self.parent.title]
         self.desc.append ('Frequency: %.2f MHz' % self.f)
-        self.desc.append ('Outer ring: %.2f dBi' % self.maxg)
         self.lbl_deg   = 0
         self.labels    = None
     # end def compute
@@ -139,6 +190,7 @@ class Gain_Data:
     def azimuth_text (self, scaler):
         desc = self.desc.copy ()
         desc.insert (0, 'Azimuth Pattern')
+        desc.append ('Outer ring: %.2f dBi' % self.parent.maxg)
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Elevation: %.2f°'
@@ -165,6 +217,7 @@ class Gain_Data:
     def elevation_text (self, scaler):
         desc = self.desc.copy ()
         desc.insert (0, 'Elevation Pattern')
+        desc.append ('Outer ring: %.2f dBi' % self.parent.maxg)
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Azimuth: %.2f° (X: 0°)'
@@ -699,7 +752,7 @@ class Gain_Plot:
             , text    = ['%.2f dBi (%.2f dB)' % (u, u - self.maxg)
                          for u in self.unscaled
                         ]
-            , hovertemplate = 'gain: %%{text}<br>%s: %%{theta}' % nm
+            , hovertemplate = 'Gain: %%{text}<br>%s: %%{theta}' % nm
             )
         fig.add_trace (go.Scatterpolar (**df))
         if self.plotly_lastfig:
@@ -764,7 +817,9 @@ class Gain_Plot:
         ax.tick_params (axis = 'y', rotation = 'auto')
         an = self.angle_name
         def format_polar_coord (x, y):
-            return '%s=%.2f°, r=%.3f' % (an, x / np.pi * 180, y)
+            sc = self.scaler.invscale (y)
+            return '%s=%.2f°, Gain=%.2f dBi (%.2f dB)' \
+                % (an, x / np.pi * 180, sc + self.maxg, sc)
         ax.format_coord = format_polar_coord
     # end def polarplot_matplotlib
 
@@ -830,7 +885,7 @@ class Gain_Plot:
         tickvals [0] = gains.max ()
         lgroup  = 'l%d' % self.plotly_count
         visible = True if self.plotly_firstfig else 'legendonly'
-        tpl = ('gain: %{customdata[0]:.2f} dBi (%{customdata[1]:.2f} dB)<br>'
+        tpl = ('Gain: %{customdata[0]:.2f} dBi (%{customdata[1]:.2f} dB)<br>'
                'Azimuth: %{customdata[2]:.2f}° (X: 0°)<br>'
                'Elevation: %{customdata[3]:.2f}°'
               )
