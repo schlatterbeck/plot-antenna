@@ -16,7 +16,6 @@
 *.out
 README.html
 __pycache__
-pymininec.egg-info
 build
 dist
 announce_pypi
@@ -25,3 +24,4 @@ upload_pypi
 *.hacked
 old
 zoppel.png
+plot_antenna.egg-info

@@ -23,7 +23,6 @@
 # SOFTWARE.
 # ****************************************************************************
 
-from warnings import filterwarnings
 from setuptools import setup
 try :
     from mininec.Version import VERSION
@@ -33,33 +32,26 @@ except :
 with open ('README.rst') as f:
     description = f.read ()
 
-filterwarnings \
-    ( "ignore"
-    , "Unknown distribution option: 'python_requires'"
-    )
-
 license     = 'MIT License'
 rq          = '>=3.7'
 setup \
-    ( name             = "pymininec"
+    ( name             = "plot-antenna"
     , version          = VERSION
     , description      =
-        "Python version of the original MININEC Antenna Optimization code"
+        "Antenna plotting program"
     , long_description = ''.join (description)
     , long_description_content_type='text/x-rst'
     , license          = license
     , author           = "Ralf Schlatterbeck"
     , author_email     = "rsc@runtux.com"
-    , install_requires = ['matplotlib', 'numpy', 'scipy']
-    , packages         = ['mininec']
+    , install_requires = ['matplotlib', 'numpy']
+    , packages         = ['plot_antenna']
     , platforms        = 'Any'
-    , url              = "https://github.com/schlatterbeck/pymininec"
+    , url              = "https://github.com/schlatterbeck/plot-antenna"
     , python_requires  = rq
     , entry_points     = dict
         ( console_scripts =
-            [ 'pymininec=mininec.mininec:main'
-            , 'plot-antenna=mininec.plot_antenna:main'
-            ]
+            [ 'plot-antenna=mininec.plot_antenna:main' ]
         )
     , classifiers      = \
         [ 'Development Status :: 4 - Beta'
