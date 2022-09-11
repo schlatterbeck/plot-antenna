@@ -12,8 +12,8 @@ Antenna Plotting Program
     :trim:
 
 This is a program to plot antenna-related data resulting from an antenna
-simulation. It can read the text output produced by `nec2c`_ and my
-python mininec port `pymininec`_. Most notably it can plot antenna
+simulation. It can read the text output produced by nec2c_ and my
+python mininec port pymininec_. Most notably it can plot antenna
 far-field pattern in both 2D (Azimuth and Elevation) and 3D (as a 3D
 graphic that can be rotated and zoomed). It support a local display
 program (using matplotlib_) and a HTML output version that displays
@@ -21,9 +21,9 @@ everything using javascript (using plotly_). The program features a
 ``--help`` option. If the program called with ``--help`` does not
 display a ``-H`` or ``--export-html`` option, you most likely do not
 have a recent version of plotly_ installed. In that case only the
-matplotlib variant is available.
+matplotlib_ variant is available.
 
-The program started out as a companion-program to my `pymininec`_
+The program started out as a companion-program to my pymininec_
 project and is now an independent program.
 
 Plotting
@@ -61,15 +61,15 @@ diagram. The default is to plot all four graphs. With the ``--output``
 option pictures can directly be saved without displaying the graphics on
 the screen.
 
-The plot program can also display output files of ``nec2c``, not only
-from ``pymininec``.
+The plot program can also display output files of nec2c_, not only
+from pymininec_.
 
 The latest version has key-bindings for scrolling through the
 frequencies of an antenna simulation. So if you have an output file with
-a simulation of multiple frequencies (either with ``pymininec`` or
-``nec2c``) you can display diagrams for the next frequency by typing
+a simulation of multiple frequencies (either with pymininec_ or
+nec2c_) you can display diagrams for the next frequency by typing
 ``+``, and to the previous frequency by typing ``-``. For newer versions
-of ``matplotlib`` you can display a scrollbar for the frequencies with
+of matplotlib_ you can display a scrollbar for the frequencies with
 the ``--with-slider`` option.
 
 Other keybindings switch the scaling for the antenna plots, ``a``
@@ -79,7 +79,7 @@ scaling.
 
 Finally the ``w`` key toggles display of the 3d diagram from/to
 wireframe display. Note that the wireframe display may not be supported
-on all versions of ``matplotlib`` and/or graphics cards.
+on all versions of matplotlib_ and/or graphics cards.
 
 .. [1] L. B. Cebik. Radiation plots: Polar or rectangular; log or linear.
     In Antenna Modeling Notes [2], chapter 48, pages 366–379. Available
@@ -92,3 +92,7 @@ on all versions of ``matplotlib`` and/or graphics cards.
     http://on5au.be/Books/allmodnotes.zip
 .. _`Antenna modelling notes episode 48`:
     http://on5au.be/content/amod/amod48.html
+.. _nec2c: https://packages.debian.org/stable/hamradio/nec2c
+.. _pymininec: https://github.com/schlatterbeck/pymininec
+.. _matplotlib: https://matplotlib.org/
+.. _plotly: https://github.com/plotly/plotly.py

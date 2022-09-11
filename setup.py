@@ -38,7 +38,7 @@ setup \
     ( name             = "plot-antenna"
     , version          = VERSION
     , description      =
-        "Antenna plotting program"
+        "Antenna plotting program for plotting antenna simulation results"
     , long_description = ''.join (description)
     , long_description_content_type='text/x-rst'
     , license          = license
