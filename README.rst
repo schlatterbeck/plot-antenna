@@ -93,7 +93,7 @@ Plotting for the Browser with Plotly
 All the plot supported for matplotlib_ are also supported with plotly_.
 These are ``--elevation``, ``--azimuth``, ``--plot3d``, ``--plot-vswr``,
 and ``--geo``. The plots can be either exported to a .html file using
-the ``-H`` or ``--export-html` option (with an additional filename to
+the ``-H`` or ``--export-html`` option (with an additional filename to
 export to) or injected into a running browser using the ``-S`` or
 ``--show-in-browser`` option.
 

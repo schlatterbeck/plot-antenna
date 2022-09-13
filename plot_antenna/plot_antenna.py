@@ -564,7 +564,9 @@ class Gain_Plot:
         self.frequency = f
         self.cur_freq  = f
         self.impedance = self.args.system_impedance
-        if self.args.export_html or self.args.show_in_browser:
+        if  (  getattr (self.args, 'export_html', None)
+            or getattr (self.args, 'show_in_browser', None)
+            ):
             self.plot_plotly (f)
         else:
             self.plot_matplotlib (f)
@@ -734,7 +736,9 @@ class Gain_Plot:
 
     def polarplot (self, name):
         self.angle_name  = name [0].upper () + name [1:]
-        if self.args.export_html or self.args.show_in_browser:
+        if  (  getattr (self.args, 'export_html', None)
+            or getattr (self.args, 'show_in_browser', None)
+            ):
             self.polarplot_plotly (name)
         else:
             self.polarplot_matplotlib (name)

@@ -26,7 +26,7 @@ import unittest
 import pytest
 import filecmp
 import hashlib
-from mininec.plot_antenna import main
+from plot_antenna.plot_antenna import main
 
 class Test_Plot (unittest.TestCase):
     outfile = 'zoppel-test.png'
@@ -55,9 +55,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_azimuth (self):
         checksums = set \
-            (( '87e13e39a92e12e79eab915c8954d5100f90b5fd'
-             , '968bd23b42eaf39dd1a512e282ebcc50cc7aaaea'
-             , '70a43a76cb5ac3b4c65c18e73d4b370652667e0c'
+            (( '4ba633ef2d286cbfd07bc0f845dbd92f6063bd72'
+             , 'cae02fba0ce8d6c84397d70f8f267adfce2334b7'
+             , '6f7e3004927ddf2623c87d5976ca19053b1b342d'
             ))
         infile = "test/12-el-1deg.pout"
         args = ["--azi", "--out=%s" % self.outfile, infile]
@@ -67,9 +67,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_azimuth_linear (self):
         checksums = set \
-            (( '3793e726c2dc1ad0bf1b6cd5c138182578ca0936'
-             , 'bf9c5804cbc546a54921745d1746a696bf40a0e9'
-             , '6c12919897a6dddf0b7ac5c42e5682d586deb44a'
+            (( '6edb2e10c24cd218ea6f7b544950b99cfc58bbd8'
+             , 'bdb0566025474fdb3ff2bba6a3040a44b8ac0d43'
+             , '74c1316ce650cd8554b58e6581a019c2e3223275'
             ))
         infile = "test/12-el-5deg.pout"
         args = [ "--azi", "--scaling-method=linear"
@@ -81,9 +81,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_azimuth_linear_voltage (self):
         checksums = set \
-            (( '4a9044274f104f74cab5c484625d2090230385f5'
-             , 'aec07c0157118d7cf194d5f1a805be3286b80b5d'
-             , 'f79c1ff393bc8ef1e95f44cb012f5de4f238e95b'
+            (( 'a0c104f1e87b98bc4c5d716c65486ca1c37755aa'
+             , '3102f95ceca5c3767f4b064def9ef1e701eb05db'
+             , '269dfb8af39cd2e6bfde89868a0ef7ee83c76e9b'
             ))
         infile = "test/12-el-5deg.pout"
         args = [ "--azi", "--scaling-method=linear_voltage"
@@ -95,9 +95,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_azimuth_db (self):
         checksums = set \
-            (( '78de072c12ea607ed8dfd0932dc4d8318710bdb5'
-             , 'cf1098a0b9454498b893567d34c8f6fb610ccfb8'
-             , '7e51e4b9709dd695feb7ccace5c2eccae3d9dee1'
+            (( '650172f1ea286ed2eeeda9060c035ffc65f7a640'
+             , '4737bd0c3e172014f7b13d3da3f4e165c223fb6a'
+             , '046df401b907a6e7adf7cc84862de3a19a599981'
             ))
         infile = "test/12-el-5deg.pout"
         args = [ "--azi", "--scaling-method=linear_db"
@@ -109,9 +109,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_elevation (self):
         checksums = set \
-            (( '111bb4f7a5d99be148e67fd3a5c0976cab58e225'
-             , 'ee17b416807e7e86cc609b0ec04197547766a475'
-             , '03fba22dd91c16a193a4a62beed621a7a3c0001d'
+            (( 'cb7e1d536a4f25c686eed0ee2338ee171144afdd'
+             , 'fd4ec4e93099432df09b7debe7663c9e9160c69a'
+             , 'fec43025d6efe53d2a2dff877cec6aaafc6660c9'
             ))
         infile = "test/12-el-1deg.pout"
         args = ["--ele", "--out=%s" % self.outfile, infile]
@@ -133,9 +133,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_plotall (self):
         checksums = set \
-            (( '8d66c8224df6f0fa526b196d72eff1f9f40b1b69'
-             , '9b37e9dde5cab03e45b6bee540703288d7ac3738'
-             , 'b49a528e1a0267b401d5f0f29716ef9930089d3f'
+            (( 'b6954156e247485180c98f7c22489d4eb6d035d1'
+             , '741be574591ae25d3277b23e4d63403ccc16ffab'
+             , '6128cf125ae9b03837733117871601e4cebde090'
             ))
         infile = "test/inverted-v.pout"
         args = ["--out=%s" % self.outfile, infile]
@@ -157,9 +157,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_basic_output (self):
         checksums = set \
-            (( '8a303a9907121e917e0047451110b8905ab4526c'
-             , '0d490c964bc1f740d2a94e8cd777b24e30bb469a'
-             , '210f8f0ddb2ed12fe9c92e52fab03358ff9e7de9'
+            (( 'a93fd750b4492788282d8edc6f2c6cae5cbcc972'
+             , '30791dceac2bf8332b11d714989e777c63168a44'
+             , 'eb638463bdab9c380b9c04242f3b230495ca3a12'
             ))
         infile = "test/vdipole-01.bout"
         args = ["--ele", "--out=%s" % self.outfile, infile]
@@ -171,9 +171,9 @@ class Test_Plot (unittest.TestCase):
         """ Original basic implementation can save gains to a file
         """
         checksums = set \
-            (( '55c6cb4a713d0950c24529a1e0b220b1465f8047'
-             , '7ff88a12c6ea96289e9a27dc8c7ba51cd5b5f43b'
-             , 'baa9403ed2893533886799cf730a298a84fa59f1'
+            (( '7e74e90107298586e93503b117cc59a6400d9232'
+             , '0e1b066d1486e33b720728fc0c6ea2a1e1e2aa24'
+             , '75e08e9c80b248abef3aa240c50898bb2db9a6db'
             ))
         infile = "test/DP001.GNN"
         args = ["--ele", "--out=%s" % self.outfile, infile]
@@ -185,9 +185,9 @@ class Test_Plot (unittest.TestCase):
         """ We also can parse nec2c output
         """
         checksums = set \
-            (( '1e62d599284cd08170668e3ba5ce279fa36f36bb'
-             , 'aec56687ccb700c60a558adf02d5cf81fcab7436'
-             , '2ac05564733a3b7765e84eaa1e24d515f7146e95'
+            (( '914fe4fb6668f6fdd4f0ec2d8d16917dc2b0257f'
+             , '7ac55ddedc11e35269488aa97058a68fa7a2df5f'
+             , 'cfaee57e61f48c07320f4ce66720146df68d00c0'
             ))
         infile = "test/12-el.nout"
         args = ["--azi", "--swr", "--out=%s" % self.outfile, infile]

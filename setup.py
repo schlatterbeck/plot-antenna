@@ -25,7 +25,7 @@
 
 from setuptools import setup
 try :
-    from mininec.Version import VERSION
+    from plot_antenna.Version import VERSION
 except :
     VERSION = None
 
@@ -51,7 +51,7 @@ setup \
     , python_requires  = rq
     , entry_points     = dict
         ( console_scripts =
-            [ 'plot-antenna=mininec.plot_antenna:main' ]
+            [ 'plot-antenna=plot_antenna.plot_antenna:main' ]
         )
     , classifiers      = \
         [ 'Development Status :: 4 - Beta'
