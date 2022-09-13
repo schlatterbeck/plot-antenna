@@ -704,7 +704,7 @@ class Gain_Plot:
     def azimuth (self, name):
         self.desc = self.data.azimuth_text (self.scaler)
         pm = self.data.phis_d [self.phi_maxidx]
-        self.lbl_deg = (pm - 90) % 360
+        self.lbl_deg = pm
         self.labels  = 'XY'
         self.polargains, self.unscaled = self.data.azimuth_gains (self.scaler)
         self.angles = self.data.phis
