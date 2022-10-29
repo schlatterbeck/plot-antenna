@@ -237,7 +237,7 @@ class Gain_Data:
             ([ self.gains
              , self.gains - self.parent.maxg
              , P / np.pi * 180
-             , (90 - T / np.pi * 180) % 360
+             , 90 - T / np.pi * 180
             ], axis = -1)
         # Workaround: plotly swaps the axes, see
         # https://github.com/plotly/plotly.js/issues/5003
