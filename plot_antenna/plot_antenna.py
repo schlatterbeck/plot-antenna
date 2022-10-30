@@ -875,6 +875,7 @@ class Gain_Plot:
                          }
                         }
                       );"""
+
     def plot3d_plotly (self, name):
         t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         xr, yr, zr = self.scene_ranges ()
@@ -905,8 +906,7 @@ class Gain_Plot:
                 , colorbar = dict
                     ( tickvals = tickvals
                     , ticktext = ticktext
-                    , x = 0.85, y = 0.49
-                    , len = 1.05
+                    , x = 0.75, y = 0.49
                     )
                 , customdata    = t
                 , hovertemplate = tpl
