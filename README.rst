@@ -121,7 +121,7 @@ be selected for plotting. This allows comparison of pattern between
 different frequencies. For the 3D plot, the frequencies in the legend
 act like radio-buttons, only one at a time can be selected.
 
-With the --geo option you get a display of the antenna geometry.
+With the ``--geo`` option you get a display of the antenna geometry.
 Unfortunately plotly_ seems to have limitations on the zoom depths, so
 for large antennas it is not possible to see the plot in deep detail. As
 of this writing not all geometry details are displayed. In particular 2D
@@ -143,3 +143,17 @@ segments (e.g. with a capacity) are not shown.
 .. _pymininec: https://github.com/schlatterbeck/pymininec
 .. _matplotlib: https://matplotlib.org/
 .. _plotly: https://github.com/plotly/plotly.py
+
+Release Notes
+-------------
+
+v1.1: Specification of azimuth / elevation angle
+
+- Now we can specify an azimuth angle for elevation plot and an
+  elevation angle for azimuth plots
+- Bug-fix in computation of maximum gain azimuth direction: If the
+  maximum gain in theta direction goes up or down, the azimuth angle
+  would be computed incorrectly because all gain values at that theta
+  angle are the same for all azimuth angles.
+
+v1.0: Initial Release

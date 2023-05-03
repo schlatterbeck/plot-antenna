@@ -5,6 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
+from bisect import bisect
 from mpl_toolkits.mplot3d import Axes3D
 from argparse import ArgumentParser
 from matplotlib import cm, __version__ as matplotlib_version, rcParams
@@ -173,6 +174,12 @@ class Gain_Data:
             (np.array (gains), (self.thetas.shape [0], -1))
         idx = np.unravel_index (self.gains.argmax (), self.gains.shape)
         self.theta_maxidx, self.phi_maxidx = idx
+        # Special case: If theta is 0° or 180° recompute phi_maxidx
+        # since in that case all values are the same at that theta angle
+        if self.thetas_d [self.theta_maxidx] == 0:
+            self.phi_maxidx = self.gains [1].argmax ()
+        elif self.thetas_d [self.theta_maxidx] == 180:
+            self.phi_maxidx = self.gains [-1].argmax ()
         self.theta_max = self.thetas_d [self.theta_maxidx]
         self.phi_max   = self.phis_d   [self.phi_maxidx]
         self.desc      = ['Title: %s' % self.parent.title]
@@ -182,7 +189,7 @@ class Gain_Data:
     # end def compute
 
     def azimuth_gains (self, scaler):
-        g = self.gains [self.parent.theta_maxidx]
+        g = self.gains [self.parent.theta_angle_idx]
         gains = scaler.scale (self.parent.maxg, g)
         return gains, g
     # end def azimuth_gains
@@ -194,20 +201,20 @@ class Gain_Data:
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Elevation: %.2f°'
-            % (90 - self.thetas_d [self.parent.theta_maxidx])
+            % (90 - self.thetas_d [self.parent.theta_angle_idx])
             )
         return desc
     # end def azimuth_text
 
     def elevation_gains (self, scaler):
-        gains1 = self.gains.T [self.parent.phi_maxidx].T
+        gains1 = self.gains.T [self.parent.phi_angle_idx].T
         # Find index of the other side of the azimuth
         pmx = self.phis.shape [0] - self.phis.shape [0] % 2
-        idx = (self.parent.phi_maxidx + pmx // 2) % pmx
-        assert idx != self.parent.phi_maxidx
+        idx = (self.parent.phi_angle_idx + pmx // 2) % pmx
+        assert idx != self.parent.phi_angle_idx
         eps = 1e-9
         phis = self.phis
-        assert abs (phis [idx] - phis [self.parent.phi_maxidx]) - np.pi < eps
+        assert abs (phis [idx] - phis [self.parent.phi_angle_idx]) - np.pi < eps
         gains2 = self.gains.T [idx].T
         g = np.append (gains1, np.flip (gains2))
         gains = scaler.scale (self.parent.maxg, g)
@@ -220,8 +227,8 @@ class Gain_Data:
         desc.append ('Outer ring: %.2f dBi' % self.parent.maxg)
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
-            ( 'Azimuth: %.2f° (X: 0°)'
-            % self.phis_d [self.parent.phi_maxidx]
+            ( 'Azimuth: %.2f° (X=0°)'
+            % self.phis_d [self.parent.phi_angle_idx]
             )
         return desc
     # end def elevation_text
@@ -246,6 +253,22 @@ class Gain_Data:
     # end def plot3d_gains
 
 # end class Gain_Data
+
+def nearest_angle_idx (angles, dst_angle):
+    """ Compute index of angle nearest to dst_angle in angles.
+        The sequence angles is sorted.
+    """
+    idx  = bisect (angles, dst_angle)
+    if idx >= len (angles):
+        idx = len (angles) - 1
+    if idx < 0:
+        idx = 0
+    if idx == 0:
+        return idx
+    if (abs (angles [idx] - dst_angle) < abs (angles [idx - 1] - dst_angle)):
+        return idx
+    return idx - 1
+# end def nearest_angle_idx
 
 class Gain_Plot:
     fig_x = 512
@@ -281,6 +304,7 @@ class Gain_Plot:
         # This might override title
         self.gdata = {}
         self.geo = []
+        # This populates gdata:
         self.read_file ()
         self.frequencies = []
         self.maxg = None
@@ -304,6 +328,18 @@ class Gain_Plot:
             (sorted (theta_idx, key = lambda a: theta_idx [a])) [-1]
         self.phi_maxidx = list \
             (sorted (phi_idx, key = lambda a: phi_idx [a])) [-1]
+        if self.args.azimuth_angle is not None:
+            phis = next (iter (self.gdata.values ())).phis_d
+            self.phi_angle_idx = nearest_angle_idx \
+                (phis, self.args.azimuth_angle)
+        else:
+            self.phi_angle_idx = self.phi_maxidx
+        if self.args.elevation_angle is not None:
+            thetas = next (iter (self.gdata.values ())).thetas_d
+            self.theta_angle_idx = nearest_angle_idx \
+                (thetas, 90 - self.args.elevation_angle)
+        else:
+            self.theta_angle_idx = self.theta_maxidx
         if self.outfile or len (self.gdata) == 1 or not self.with_slider:
             self.with_slider = False
         # Borrow colormap from matplotlib to use in plotly
@@ -705,8 +741,7 @@ class Gain_Plot:
 
     def azimuth (self, name):
         self.desc = self.data.azimuth_text (self.scaler)
-        pm = self.data.phis_d [self.phi_maxidx]
-        self.lbl_deg = pm
+        self.lbl_deg = self.data.phis_d [self.phi_angle_idx]
         self.labels  = 'XY'
         self.polargains, self.unscaled = self.data.azimuth_gains (self.scaler)
         self.angles = self.data.phis
@@ -725,7 +760,7 @@ class Gain_Plot:
             But second half must (both) be flipped to avoid crossover
         """
         self.desc = self.data.elevation_text (self.scaler)
-        self.lbl_deg  = 90 - self.data.thetas_d [self.theta_maxidx]
+        self.lbl_deg  = 90 - self.data.thetas_d [self.theta_angle_idx]
         self.labels   = None
         self.polargains, self.unscaled = self.data.elevation_gains (self.scaler)
         thetas = self.data.thetas
@@ -1141,6 +1176,12 @@ def main (argv = sys.argv [1:]):
         , action  = 'store_true'
         )
     cmd.add_argument \
+        ( '--azimuth-angle'
+        , help    = 'Azimuth angle to use for elevation plot, default is '
+                    'maximum gain angle'
+        , type    = float
+        )
+    cmd.add_argument \
         ( '--dpi'
         , help    = 'Resolution for matplotlib, default = %(default)s'
         , type    = int
@@ -1150,6 +1191,12 @@ def main (argv = sys.argv [1:]):
         ( '--elevation'
         , help    = 'Do an elevation plot'
         , action  = 'store_true'
+        )
+    cmd.add_argument \
+        ( '--elevation-angle'
+        , help    = 'Elevation angle to use for azimuth plot, default is '
+                    'maximum gain angle'
+        , type    = float
         )
     # For versions below 3.5 slider will be always off
     if matplotlib_version_float >= 3.5:
