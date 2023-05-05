@@ -21,7 +21,8 @@ everything using javascript (using plotly_). The program features a
 ``--help`` option. If the program called with ``--help`` does not
 display a ``-H`` or ``--export-html`` option, you most likely do not
 have a recent version of plotly_ installed. In that case only the
-matplotlib_ variant is available.
+matplotlib_ variant is available. For the plotly variant to work you
+need both, a recent version of plotly_ as well as pandas_ installed.
 
 The program started out as a companion-program to my pymininec_
 project and is now an independent program.
@@ -143,9 +144,18 @@ segments (e.g. with a capacity) are not shown.
 .. _pymininec: https://github.com/schlatterbeck/pymininec
 .. _matplotlib: https://matplotlib.org/
 .. _plotly: https://github.com/plotly/plotly.py
+.. _pandas: https://pandas.pydata.org/
 
 Release Notes
 -------------
+
+v1.2: Allow specification of title (legend) font size in plotly version
+
+- For some application (e.g. when using the plotly graphics inside a
+  html iframe) the title (or we may want to call it legend) of the
+  graphics may collide with the graphics itself. We can now specify the
+  font size with ``--title-font-size``. This option currently works only
+  with plotly graphics.
 
 v1.1: Specification of azimuth / elevation angle
 

@@ -799,6 +799,8 @@ class Gain_Plot:
             # don't use fig.update_layout (title = desc) which will
             # delete title attributes
             fig.layout.title.text = desc
+            if self.args.title_font_size:
+                fig.layout.title.font.size = self.args.title_font_size
             lbl_deg = self.lbl_deg or 0
             tickangle = 90
             if lbl_deg > 180:
@@ -1243,6 +1245,11 @@ def main (argv = sys.argv [1:]):
         ( '--plot-vswr', '--swr', '--vswr', '--plot-swr'
         , help    = 'Plot voltage standing wave ratio (VSWR)'
         , action  = 'store_true'
+        )
+    cmd.add_argument \
+        ( '--title-font-size'
+        , help    = 'Title/legend font size (currently only used in plotly)'
+        , type    = int
         )
     cmd.add_argument \
         ( '--wireframe'
