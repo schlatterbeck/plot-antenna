@@ -779,6 +779,21 @@ class Gain_Plot:
             self.polarplot_matplotlib (name)
     # end def polarplot
 
+    plotly_polar_script = """
+            var myPlot = document.getElementById('{plot_id}');
+            var modebar =
+                    { 'add' :
+                        [   { 'name'  : 'Reset'
+                            , 'icon'  : Plotly.Icons.home
+                            , 'click' : function (gd)
+                              { Plotly.relayout
+                                (gd, {'polar.radialaxis.range': [0,1]});
+                              }
+                            }
+                        ]
+                    };
+            myPlot.layout ['modebar'] = modebar;"""
+
     def polarplot_plotly (self, name):
         fig = self.plotly_fig
         nm  = self.angle_name
@@ -831,7 +846,7 @@ class Gain_Plot:
 #                    , text      = self.labels [1]
 #                    , font      = dict (size = 18)
 #                    )
-            self.show_plotly (fig, name)
+            self.show_plotly (fig, name, script = self.plotly_polar_script)
     # end def polarplot_plotly
 
     def polarplot_matplotlib (self, name):
@@ -1248,7 +1263,8 @@ def main (argv = sys.argv [1:]):
         )
     cmd.add_argument \
         ( '--title-font-size'
-        , help    = 'Title/legend font size (currently only used in plotly)'
+        , help    = 'Title/legend font size in pt '
+                    '(currently only used in plotly)'
         , type    = int
         )
     cmd.add_argument \
