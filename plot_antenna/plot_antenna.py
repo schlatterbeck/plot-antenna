@@ -781,7 +781,8 @@ class Gain_Plot:
 
     plotly_polar_script = """
             var myPlot = document.getElementById('{plot_id}');
-            var modebar =
+            Plotly.relayout (myPlot,
+                {'modebar':
                     { 'add' :
                         [   { 'name'  : 'Reset'
                             , 'icon'  : Plotly.Icons.home
@@ -791,8 +792,9 @@ class Gain_Plot:
                               }
                             }
                         ]
-                    };
-            myPlot.layout ['modebar'] = modebar;"""
+                    }
+                });
+            """
 
     def polarplot_plotly (self, name):
         fig = self.plotly_fig
