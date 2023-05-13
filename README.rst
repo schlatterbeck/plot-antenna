@@ -149,6 +149,12 @@ segments (e.g. with a capacity) are not shown.
 Release Notes
 -------------
 
+v1.3: Add a reset button to plotly polar plots
+
+- The polar plots, when zoomed in, could only be reset to the unzoomed
+  view with a double-click. All other plots do have a reset button, add
+  one for the polar plots, too.
+
 v1.2: Allow specification of title (legend) font size in plotly version
 
 - For some application (e.g. when using the plotly graphics inside a
