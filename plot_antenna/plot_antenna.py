@@ -788,7 +788,13 @@ class Gain_Plot:
                             , 'icon'  : Plotly.Icons.home
                             , 'click' : function (gd)
                               { Plotly.relayout
-                                (gd, {'polar.radialaxis.range': [0,1]});
+                                ( gd
+                                , { 'polar.radialaxis.range': [0,1]
+                                  , 'polar.radialaxis.angle': %(lbl_deg)s
+                                  , 'polar.radialaxis.tickangle' : %(tickangle)s
+                                  , 'polar.angularaxis.rotation' : 0
+                                  }
+                                );
                               }
                             }
                         ]
@@ -824,6 +830,7 @@ class Gain_Plot:
                 tickangle = -90
             fig.layout.polar.radialaxis.tickangle = tickangle
             fig.layout.polar.radialaxis.angle = lbl_deg
+            fig.layout.polar.radialaxis.range = [0,1]
 # Trying to display 'X' and 'Y' on Azimuth plot
 # Doesn't work: This doesn't correctly scale and it seems giving
 # annotations in polar coordinates is still not possible
@@ -848,7 +855,8 @@ class Gain_Plot:
 #                    , text      = self.labels [1]
 #                    , font      = dict (size = 18)
 #                    )
-            self.show_plotly (fig, name, script = self.plotly_polar_script)
+            script = self.plotly_polar_script % locals ()
+            self.show_plotly (fig, name, script = script)
     # end def polarplot_plotly
 
     def polarplot_matplotlib (self, name):
