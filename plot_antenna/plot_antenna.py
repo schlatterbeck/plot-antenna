@@ -805,6 +805,7 @@ class Gain_Plot:
     def polarplot_plotly (self, name):
         fig = self.plotly_fig
         nm  = self.angle_name
+        tpl = 'Gain: %%{text}<br>%s: %%{theta}<extra></extra>' % nm
         df = dict \
             ( r       = self.polargains
             , theta   = (self.angles / np.pi * 180) % 360
@@ -814,7 +815,7 @@ class Gain_Plot:
             , text    = ['%.2f dBi (%.2f dB)' % (u, u - self.maxg)
                          for u in self.unscaled
                         ]
-            , hovertemplate = 'Gain: %%{text}<br>%s: %%{theta}' % nm
+            , hovertemplate = tpl
             )
         fig.add_trace (go.Scatterpolar (**df))
         if self.plotly_lastfig:
@@ -954,7 +955,7 @@ class Gain_Plot:
         visible = True if self.plotly_firstfig else 'legendonly'
         tpl = ('Gain: %{customdata[0]:.2f} dBi (%{customdata[1]:.2f} dB)<br>'
                'Azimuth: %{customdata[2]:.2f}° (X: 0°)<br>'
-               'Elevation: %{customdata[3]:.2f}°'
+               'Elevation: %{customdata[3]:.2f}°<extra></extra>'
               )
 
         fig.add_trace \
