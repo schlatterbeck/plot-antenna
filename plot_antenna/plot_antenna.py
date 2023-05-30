@@ -275,6 +275,8 @@ class Gain_Plot:
     fig_y = 384
     plot_names   = ('azimuth', 'elevation', 'plot_vswr', 'plot3d', 'plot_geo')
     update_names = set (('azimuth', 'elevation', 'plot3d'))
+    font_sans    = \
+        "Helvetica, Nimbus Sans, Liberation Sans, Open Sans, arial, sans-serif"
 
 
     def __init__ (self, args):
@@ -373,7 +375,7 @@ class Gain_Plot:
                     )
                 , title = dict
                     ( font = dict
-                        ( family = "Helvetica"
+                        ( family = self.font_sans
                         , color  = "#010101"
                         )
                     )
@@ -390,11 +392,11 @@ class Gain_Plot:
                 , colorway   = self.colormap
                 , xaxis = dict
                     ( linecolor = "#B0B0B0"
-                    , gridcolor = "white"
+                    , gridcolor = "#F2F2F2"
                     )
                 , yaxis = dict
                     ( linecolor = "#B0B0B0"
-                    , gridcolor = "white"
+                    , gridcolor = "#F2F2F2"
                     )
                 , paper_bgcolor = 'white'
                 , plot_bgcolor  = 'white'
@@ -1017,6 +1019,8 @@ class Gain_Plot:
             rho = np.abs ((z - z0) / (z + z0))
             X.append (f)
             Y.append ((1 + rho) / (1 - rho))
+        min_idx = np.argmin (Y)
+        self.min_x = X [min_idx]
         return X, Y
     # end def prepare_vswr
 
@@ -1026,6 +1030,8 @@ class Gain_Plot:
         ax.set_ylabel ('VSWR')
         X, Y = self.prepare_vswr ()
         ax.plot (X, Y)
+        ax.grid (color = '0.95')
+        ax.axvline (x = self.min_x, color = 'r', linestyle = 'dashed')
     # end def plot_vswr_matplotlib
 
     def plot_vswr_plotly (self, name):
@@ -1035,6 +1041,7 @@ class Gain_Plot:
         df ['VSWR'] = Y
         fig = px.line (df, x="Frequency", y="VSWR")
         fig.update (self.plotly_line_default)
+        fig.add_vline (x = self.min_x, line_dash = "dash", line_color = "red")
         self.show_plotly (fig, name)
     # end def plot_vswr_plotly
 
