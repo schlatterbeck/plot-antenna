@@ -149,6 +149,12 @@ segments (e.g. with a capacity) are not shown.
 Release Notes
 -------------
 
+v1.4: Reset button and VSWR-Plot improvements
+
+- Add grid and minimum-SWR vertical line to VSWR plot
+- Remove display of frequency in mouse-over (in polar plots and 3D plot)
+- Make polar reset button reset more parameters
+
 v1.3: Add a reset button to plotly polar plots
 
 - The polar plots, when zoomed in, could only be reset to the unzoomed
