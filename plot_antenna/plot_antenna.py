@@ -1021,6 +1021,14 @@ class Gain_Plot:
             Y.append ((1 + rho) / (1 - rho))
         min_idx = np.argmin (Y)
         self.min_x = X [min_idx]
+        if self.args.target_swr_frequency:
+            if not X [0] <= self.args.target_swr_frequency <= X [-1]:
+                print \
+                    ( "Warning: SWR target frequency %.2f not in range, ignored"
+                    % self.args.target_swr_frequency
+                    , file = sys.stderr
+                    )
+                self.args.target_swr_frequency = None
         return X, Y
     # end def prepare_vswr
 
@@ -1031,7 +1039,10 @@ class Gain_Plot:
         X, Y = self.prepare_vswr ()
         ax.plot (X, Y)
         ax.grid (color = '0.95')
-        ax.axvline (x = self.min_x, color = 'r', linestyle = 'dashed')
+        tg = self.args.target_swr_frequency
+        if tg is not None:
+            ax.axvline (x = tg, color = 'r', linestyle = 'dashed')
+        ax.axvline (x = self.min_x, color = 'grey', linestyle = 'dashed')
     # end def plot_vswr_matplotlib
 
     def plot_vswr_plotly (self, name):
@@ -1041,7 +1052,10 @@ class Gain_Plot:
         df ['VSWR'] = Y
         fig = px.line (df, x="Frequency", y="VSWR")
         fig.update (self.plotly_line_default)
-        fig.add_vline (x = self.min_x, line_dash = "dash", line_color = "red")
+        tg = self.args.target_swr_frequency
+        if tg is not None:
+            fig.add_vline (x = tg, line_dash = "dash", line_color = "red")
+        fig.add_vline (x = self.min_x, line_dash = "dash", line_color = "grey")
         self.show_plotly (fig, name)
     # end def plot_vswr_plotly
 
@@ -1278,6 +1292,12 @@ def main (argv = sys.argv [1:]):
         ( '--plot-vswr', '--swr', '--vswr', '--plot-swr'
         , help    = 'Plot voltage standing wave ratio (VSWR)'
         , action  = 'store_true'
+        )
+    cmd.add_argument \
+        ( "--target-swr-frequency", "--target-vswr-frequency"
+        , help    = "In SWR plot, draw a red vertical line at this "
+                    "frequency"
+        , type    = float
         )
     cmd.add_argument \
         ( '--title-font-size'

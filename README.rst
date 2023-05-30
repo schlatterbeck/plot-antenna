@@ -149,6 +149,11 @@ segments (e.g. with a capacity) are not shown.
 Release Notes
 -------------
 
+v1.5: Allow target SWR frequency in VSWR plot
+
+- Add command-line option --target-swr-frequency
+- Draw user-specifed target frequency in red, best (minimum) swr in grey
+
 v1.4: Reset button and VSWR-Plot improvements
 
 - Add grid and minimum-SWR vertical line to VSWR plot
