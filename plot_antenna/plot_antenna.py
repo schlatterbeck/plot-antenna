@@ -330,16 +330,16 @@ class Gain_Plot:
             (sorted (theta_idx, key = lambda a: theta_idx [a])) [-1]
         self.phi_maxidx = list \
             (sorted (phi_idx, key = lambda a: phi_idx [a])) [-1]
-        if self.args.azimuth_angle is not None:
+        if self.args.angle_azimuth is not None:
             phis = next (iter (self.gdata.values ())).phis_d
             self.phi_angle_idx = nearest_angle_idx \
-                (phis, self.args.azimuth_angle)
+                (phis, self.args.angle_azimuth)
         else:
             self.phi_angle_idx = self.phi_maxidx
-        if self.args.elevation_angle is not None:
+        if self.args.angle_elevation is not None:
             thetas = next (iter (self.gdata.values ())).thetas_d
             self.theta_angle_idx = nearest_angle_idx \
-                (thetas, 90 - self.args.elevation_angle)
+                (thetas, 90 - self.args.angle_elevation)
         else:
             self.theta_angle_idx = self.theta_maxidx
         if self.outfile or len (self.gdata) == 1 or not self.with_slider:
@@ -1041,8 +1041,11 @@ class Gain_Plot:
         ax.grid (color = '0.95')
         tg = self.args.target_swr_frequency
         if tg is not None:
-            ax.axvline (x = tg, color = 'r', linestyle = 'dashed')
-        ax.axvline (x = self.min_x, color = 'grey', linestyle = 'dashed')
+            c = self.args.swr_target_color
+            ax.axvline (x = tg, color = c, linestyle = 'dashed')
+        c = self.args.swr_min_color
+        if c and c.lower () != 'none':
+            ax.axvline (x = self.min_x, color = c, linestyle = 'dashed')
     # end def plot_vswr_matplotlib
 
     def plot_vswr_plotly (self, name):
@@ -1054,8 +1057,11 @@ class Gain_Plot:
         fig.update (self.plotly_line_default)
         tg = self.args.target_swr_frequency
         if tg is not None:
-            fig.add_vline (x = tg, line_dash = "dash", line_color = "red")
-        fig.add_vline (x = self.min_x, line_dash = "dash", line_color = "grey")
+            c = self.args.swr_target_color
+            fig.add_vline (x = tg, line_dash = "dash", line_color = c)
+        c = self.args.swr_min_color
+        if c and c.lower () != 'none':
+            fig.add_vline (x = self.min_x, line_dash = "dash", line_color = c)
         self.show_plotly (fig, name)
     # end def plot_vswr_plotly
 
@@ -1225,7 +1231,7 @@ def main (argv = sys.argv [1:]):
         , action  = 'store_true'
         )
     cmd.add_argument \
-        ( '--azimuth-angle'
+        ( '--angle-azimuth'
         , help    = 'Azimuth angle to use for elevation plot, default is '
                     'maximum gain angle'
         , type    = float
@@ -1242,7 +1248,7 @@ def main (argv = sys.argv [1:]):
         , action  = 'store_true'
         )
     cmd.add_argument \
-        ( '--elevation-angle'
+        ( '--angle-elevation'
         , help    = 'Elevation angle to use for azimuth plot, default is '
                     'maximum gain angle'
         , type    = float
@@ -1298,6 +1304,18 @@ def main (argv = sys.argv [1:]):
         , help    = "In SWR plot, draw a red vertical line at this "
                     "frequency"
         , type    = float
+        )
+    cmd.add_argument \
+        ( "--swr-min-color", "--vswr-min-color"
+        , help    = "Draw minimum SWR vertical line in this color, use "
+                    "'none' to not draw the line"
+        , default = 'green'
+        )
+    cmd.add_argument \
+        ( "--swr-target-color", "--vswr-target-color"
+        , help    = "If the --target-swr-frequency option is given, draw "
+                    "vertical line in this color"
+        , default = 'grey'
         )
     cmd.add_argument \
         ( '--title-font-size'
