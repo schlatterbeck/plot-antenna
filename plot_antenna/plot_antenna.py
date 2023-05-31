@@ -7,7 +7,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 from bisect import bisect
 from mpl_toolkits.mplot3d import Axes3D
-from argparse import ArgumentParser
+from argparse import ArgumentParser, HelpFormatter
 from matplotlib import cm, __version__ as matplotlib_version, rcParams
 from matplotlib.widgets import Slider
 try:
@@ -1218,8 +1218,33 @@ class Gain_Plot:
 
 # end class Gain_Plot
 
+class SortingHelpFormatter (HelpFormatter):
+
+    def add_arguments (self, actions):
+        actions = sorted (actions, key = self.argsort)
+        super ().add_arguments (actions)
+    # end def add_arguments
+
+    @staticmethod
+    def argsort (action):
+        x = action.option_strings
+        if not x:
+            return ''
+        for opt in tuple (x):
+            if opt.startswith ('--'):
+                return opt
+    # end def argsort
+
+# end class SortingHelpFormatter
+
+class SortingArgumentParser (ArgumentParser):
+    def __init__ (self, *args, **kw):
+        super ().__init__ (*args, formatter_class = SortingHelpFormatter, **kw)
+    # end def __init__
+# end class SortingArgumentParser
+
 def main (argv = sys.argv [1:]):
-    cmd = ArgumentParser ()
+    cmd = SortingArgumentParser ()
     scaling = ['arrl', 'linear', 'linear_db', 'linear_voltage']
     cmd.add_argument \
         ( 'filename'
@@ -1301,8 +1326,7 @@ def main (argv = sys.argv [1:]):
         )
     cmd.add_argument \
         ( "--target-swr-frequency", "--target-vswr-frequency"
-        , help    = "In SWR plot, draw a red vertical line at this "
-                    "frequency"
+        , help    = "In SWR plot, draw a vertical line at this frequency"
         , type    = float
         )
     cmd.add_argument \
