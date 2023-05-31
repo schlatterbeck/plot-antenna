@@ -149,6 +149,14 @@ segments (e.g. with a capacity) are not shown.
 Release Notes
 -------------
 
+v1.6: More SWR plot changes
+
+- Make SWR-plot vertical line colors configurable
+- Rename elevation-angle and azimuth-angle options to angle-elevation
+  and angle-azimuth so that we can again request an elevation/azimuth
+  plot with shortened options like --ele or --azi
+- Sort options lexicographically on --help
+
 v1.5: Allow target SWR frequency in VSWR plot
 
 - Add command-line option --target-swr-frequency
@@ -177,10 +185,13 @@ v1.2: Allow specification of title (legend) font size in plotly version
 v1.1: Specification of azimuth / elevation angle
 
 - Now we can specify an azimuth angle for elevation plot and an
-  elevation angle for azimuth plots
+  elevation angle for azimuth plots.
 - Bug-fix in computation of maximum gain azimuth direction: If the
   maximum gain in theta direction goes up or down, the azimuth angle
   would be computed incorrectly because all gain values at that theta
   angle are the same for all azimuth angles.
+- Sort options: Since there are some options that only exist when some
+  packages are installed we sort options instead of trying to add them
+  in the correct order.
 
 v1.0: Initial Release
