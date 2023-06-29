@@ -1015,6 +1015,7 @@ class Gain_Plot:
                     ( xaxis = dict (range = xr, showticklabels = False)
                     , yaxis = dict (range = yr, showticklabels = False)
                     , zaxis = dict (range = zr, showticklabels = False)
+                    , aspectratio = dict (x=1, y=1, z=1)
                     )
                 )
             self.show_plotly (fig, name, script = self.plotly_3d_script)
