@@ -634,14 +634,28 @@ class Gain_Plot:
                         self.plotly_lastfig  = False
                         self.plotly_firstfig = True
                         if name == 'plot3d':
-                            self.plotly_fig = make_subplots \
-                                ( rows=1, cols=2
-                                , specs=[ [ {'type': 'surface'}
-                                          , {'type': 'xy'}
-                                          ]
-                                        ]
-                                , column_widths = [0.8, 0.2]
-                                )
+                            if len (self.frequencies) > 1:
+                                w = 0.035
+                                if self.args.decibel_style == 'both':
+                                    w = 0.1
+                                self.legend_width = w
+                                self.plotly_fig = make_subplots \
+                                    ( rows=1, cols=2
+                                    , specs=[ [ {'type': 'surface'}
+                                              , {'type': 'xy'}
+                                              ]
+                                            ]
+                                    , column_widths = [1-w, w]
+                                    )
+                            else:
+                                self.legend_width = 0
+                                self.plotly_fig = make_subplots \
+                                    ( rows=1, cols=1
+                                    , specs=[ [ {'type': 'surface'}
+                                              ]
+                                            ]
+                                    , column_widths = [1]
+                                    )
                             self.plotly_fig.update (self.plotly_3d_default)
                         else:
                             self.plotly_fig = go.Figure \
@@ -971,6 +985,9 @@ class Gain_Plot:
                'Elevation: %{customdata[3]:.2f}°<extra></extra>'
               )
 
+        colorbar_xpos = 1.02
+        if self.legend_width:
+            colorbar_xpos = 0.98 - self.legend_width
         fig.add_trace \
             ( go.Surface
                 ( x = X, y = Y, z = Z
@@ -982,23 +999,25 @@ class Gain_Plot:
                 , colorbar = dict
                     ( tickvals = tickvals
                     , ticktext = ticktext
-                    , x = 0.75, y = 0.49
+                    , x = colorbar_xpos, y = 0.49
+                    , xpad = 0
                     )
                 , customdata    = t
                 , hovertemplate = tpl
                 )
             , row = 1, col = 1
             )
-        fig.add_trace \
-            ( go.Scatter
-                ( dict (x = [1.], y = [1.], line = dict (color = 'white'))
-                , legendgroup = lgroup
-                , visible     = visible
-                , showlegend  = True
-                , name        = "f=%.3f MHz" % self.frequency
+        if len (self.frequencies) > 1:
+            fig.add_trace \
+                ( go.Scatter
+                    ( dict (x = [1.], y = [1.], line = dict (color = 'white'))
+                    , legendgroup = lgroup
+                    , visible     = visible
+                    , showlegend  = True
+                    , name        = "f=%.3f MHz" % self.frequency
+                    )
+                , row = 1, col = 2
                 )
-            , row = 1, col = 2
-            )
         if self.plotly_lastfig:
             fig.layout.update \
                 ( legend = dict
