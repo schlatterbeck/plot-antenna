@@ -417,6 +417,12 @@ class Gain_Plot:
                 , colorway      = self.colormap
                 , paper_bgcolor = 'white'
                 , plot_bgcolor  = 'white'
+                , margin        = dict
+                    ( l = self.args.margin_3d
+                    , r = self.args.margin_3d
+                    , t = self.args.margin_3d
+                    , b = self.args.margin_3d
+                    )
                 , scene = dict
                     ( xaxis = dict
                         ( linecolor      = "#B0B0B0"
@@ -1287,6 +1293,12 @@ def main (argv = sys.argv [1:]):
                         ' with +/- keys and slider is very slow.'
             , action  = 'store_true'
             )
+    cmd.add_argument \
+        ( '--margin-3d'
+        , help    = 'Margin around 3D plot in pixel for plotly backend'
+        , type    = int
+        , default = 20
+        )
     cmd.add_argument \
         ( '--plot-geo', '--geo'
         , help    = 'Plot Geometry'
