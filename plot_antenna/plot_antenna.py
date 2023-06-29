@@ -951,9 +951,14 @@ class Gain_Plot:
         t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         xr, yr, zr = self.scene_ranges ()
         fig = self.plotly_fig
-        ticktext = ['%.2f dBi (%.2f dB)' % (u + self.maxg, u)
-                    for u in self.scaler.ticks
-                   ]
+        if self.args.decibel_style == 'both':
+            ticktext = ['%.2f dBi (%.2f dB)' % (u + self.maxg, u)
+                        for u in self.scaler.ticks
+                       ]
+        elif self.args.decibel_style == 'absolute':
+            ticktext = ['%.2f dBi' % (u + self.maxg) for u in self.scaler.ticks]
+        else:
+            ticktext = ['%.2f dB' % u for u in self.scaler.ticks]
         # Ensure that the uppermost (0dB) mark is printed
         # This may be slightly off when a pattern is very different for
         # different frequencies
@@ -1267,6 +1272,14 @@ def main (argv = sys.argv [1:]):
                     'maximum gain angle'
         , type    = float
         )
+    deci_styles = ('absolute', 'relative', 'both')
+    cmd.add_argument \
+        ( '--decibel-style'
+        , help    = 'Decibel style for plotly 3D color bar,'
+                    ' one of %s, the default prints the relative value'
+                    ' in parentheses' % ', '.join (deci_styles)
+        , default = 'both'
+        )
     cmd.add_argument \
         ( '--dpi'
         , help    = 'Resolution for matplotlib, default = %(default)s'
@@ -1309,7 +1322,7 @@ def main (argv = sys.argv [1:]):
         , help    = 'Output file, default is interactive'
         )
     cmd.add_argument \
-        ( '--plot3d', '--3d', '--plot-3d'
+        ( '--plot3d', '--3d', '--plot-3d', '--3D'
         , help    = 'Do a 3D plot'
         , action  = 'store_true'
         )
@@ -1361,7 +1374,7 @@ def main (argv = sys.argv [1:]):
         )
     cmd.add_argument \
         ( '--wireframe'
-        , help    = 'Show 3d plot as a wireframe (not solid)'
+        , help    = 'Show 3D plot as a wireframe (not solid)'
         , action  = 'store_true'
         )
     if px is not None:
@@ -1391,6 +1404,9 @@ def main (argv = sys.argv [1:]):
             , action  = 'store_true'
             )
     args = cmd.parse_args (argv)
+    if args.decibel_style not in deci_styles:
+        cmd.print_usage ()
+        exit ('Invalid decibel-style: "%s"' % args.decibel_style)
     if not hasattr (args, 'with_slider'):
         args.with_slider = False
     gp   = Gain_Plot (args)
