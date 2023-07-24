@@ -5,6 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
+from html import escape
 from bisect import bisect
 from mpl_toolkits.mplot3d import Axes3D
 from argparse import ArgumentParser, HelpFormatter
@@ -19,6 +20,19 @@ except ImportError:
     px = None
 
 matplotlib_version_float = float ('.'.join (matplotlib_version.split ('.')[:2]))
+
+Omega = "\u2126"
+
+def blend (color, alpha = 0x80, bg = '#FFFFFF'):
+    """ Blend a color with a background color, default white with a
+        given alpha channel, the input color is in #RRGGBB format
+    """
+    alpha = alpha / 255
+    color = np.array ([int (color [n:n+2], 16) for n in range (1, 6, 2)]) / 255
+    bg    = np.array ([int (bg    [n:n+2], 16) for n in range (1, 6, 2)]) / 255
+    rgb   = (((1 - alpha) * bg + alpha * color) * 255).astype (int)
+    return '#%02X%02X%02X' % tuple (rgb)
+# end def blend
 
 class Scaler:
 
@@ -277,7 +291,9 @@ class Gain_Plot:
     update_names = set (('azimuth', 'elevation', 'plot3d'))
     font_sans    = \
         "Helvetica, Nimbus Sans, Liberation Sans, Open Sans, arial, sans-serif"
-
+    # Default colors for swr plot
+    c_real = '#AE4141'
+    c_imag = '#FFB329'
 
     def __init__ (self, args):
         self.args        = args
@@ -348,6 +364,7 @@ class Gain_Plot:
         self.colormap = []
         for cn in mcolors.TABLEAU_COLORS:
             self.colormap.append (mcolors.TABLEAU_COLORS [cn])
+        self.c_vswr = self.colormap [0]
     # end def __init__
 
     @property
@@ -391,15 +408,47 @@ class Gain_Plot:
                 ( showlegend = True
                 , colorway   = self.colormap
                 , xaxis = dict
-                    ( linecolor = "#B0B0B0"
-                    , gridcolor = "#F2F2F2"
+                    ( linecolor   = "#B0B0B0"
+                    , gridcolor   = "#F2F2F2"
+                    , domain      = [0, 0.9]
+                    , ticksuffix  = ' MHz'
                     )
                 , yaxis = dict
-                    ( linecolor = "#B0B0B0"
-                    , gridcolor = "#F2F2F2"
+                    ( color       = self.c_vswr
+                    , linecolor   = self.c_vswr
+                    , showgrid    = True
+                    , gridcolor   = blend (self.c_vswr)
+                    , title       = {}
+		    , anchor      = "x"
+		    , side        = "left"
+                    , hoverformat = '.2f'
+                    )
+                , yaxis2 = dict
+                    ( color       = self.c_real
+                    , linecolor   = self.c_real
+                    , showgrid    = True
+                    , gridcolor   = blend (self.c_real)
+                    , title       = {}
+                    , overlaying  = "y"
+		    , side        = "right"
+		    , anchor      = "x2"
+                    , hoverformat = '.1f'
+                    )
+                , yaxis3 = dict
+                    ( color       = self.c_imag
+                    , linecolor   = self.c_imag
+                    , showgrid    = True
+                    , gridcolor   = blend (self.c_imag)
+                    , title       = {}
+                    , overlaying  = "y"
+		    , side        = "right"
+		    , position    = 0.96
+		    , anchor      = "free"
+                    , hoverformat = '.1f'
                     )
                 , paper_bgcolor = 'white'
                 , plot_bgcolor  = 'white'
+                , hovermode     = 'x unified'
                 )
             )
         return d
@@ -1041,13 +1090,21 @@ class Gain_Plot:
     # end def plot3d_plotly
 
     def prepare_vswr (self):
-        z0 = self.impedance
-        X  = []
-        Y  = []
+        z0   = self.impedance
+        X    = []
+        Y    = []
+        imag = []
+        real = []
+        xabs = []
+        xphi = []
         for f in self.gdata:
             gd  = self.gdata [f]
             z   = gd.impedance
             rho = np.abs ((z - z0) / (z + z0))
+            imag.append (z.imag)
+            real.append (z.real)
+            xabs.append (np.abs   (z))
+            xphi.append (np.angle (z) * 180 / np.pi)
             X.append (f)
             Y.append ((1 + rho) / (1 - rho))
         min_idx = np.argmin (Y)
@@ -1060,14 +1117,25 @@ class Gain_Plot:
                     , file = sys.stderr
                     )
                 self.args.target_swr_frequency = None
-        return X, Y
+        self.min_f = min (X)
+        self.max_f = max (X)
+        self.band  = {}
+        for n in self.args.band:
+            fmin, fmax = self.args.band [n]
+            in_band = self.min_f <= fmin <= self.max_f
+            in_band = in_band or self.min_f <= fmax <= self.max_f
+            in_band = in_band or fmin <= self.min_f and self.max_f <= fmax
+            if in_band:
+                self.band [n] = self.args.band [n]
+        return X, Y, real, imag, xabs, xphi
     # end def prepare_vswr
 
     def plot_vswr_matplotlib (self, name):
+        # Color real (phi) ffb329ff imag (abs) ae4141ff
         ax = self.axes [name]
-        ax.set_xlabel ('Frequency')
+        ax.set_xlabel ('Frequency (MHz)')
         ax.set_ylabel ('VSWR')
-        X, Y = self.prepare_vswr ()
+        X, Y, real, imag, xabs, xphi = self.prepare_vswr ()
         ax.plot (X, Y)
         ax.grid (color = '0.95')
         tg = self.args.target_swr_frequency
@@ -1079,13 +1147,75 @@ class Gain_Plot:
             ax.axvline (x = self.min_x, color = c, linestyle = 'dashed')
     # end def plot_vswr_matplotlib
 
+    def add_plotly_df (self, yname, color = None, axisname = None):
+        """ Add yname in dataframe self.df to self.fig
+        """
+        d  = dict (x = self.df ["Frequency"], y = self.df [yname], name = yname)
+        if color:
+            d.update (line = dict (color = color))
+        if axisname:
+            d.update (yaxis = axisname)
+        self.fig.add_trace (go.Scatter (**d))
+    # end def add_plotly_df
+
     def plot_vswr_plotly (self, name):
-        X, Y = self.prepare_vswr ()
+        X, Y, real, imag, xabs, xphi = self.prepare_vswr ()
         df = pd.DataFrame ()
         df ['Frequency'] = X
-        df ['VSWR'] = Y
-        fig = px.line (df, x="Frequency", y="VSWR")
-        fig.update (self.plotly_line_default)
+        df ['VSWR']      = Y
+        df ['real']      = real
+        df ['imag']      = imag
+        df ['|Z|']       = xabs
+        df ['phi (Z)']   = xphi
+        self.df = df
+        self.fig = fig = go.Figure()
+        layout = self.plotly_line_default
+        self.add_plotly_df ("VSWR", self.c_vswr)
+        layout ['layout']['yaxis']['title'].update  (text = "VSWR")
+        layout ['layout']['xaxis'].update \
+            (title = dict (text = 'Frequency (MHz)'))
+        ohm = ' %s' % Omega
+        if self.args.swr_show_impedance:
+            y2 = layout ['layout']['yaxis2']
+            y2 ['ticksuffix'] = ohm
+            y3 = layout ['layout']['yaxis3']
+            if self.args.swr_plot_impedance_angle:
+                self.add_plotly_df ("|Z|", self.c_real, "y2")
+                y2 ['title'].update (text = "|Z|")
+                self.add_plotly_df ("phi (Z)", self.c_imag, "y3")
+                y3 ['title'].update (text = "phi (Z)")
+                y3.update (range = [-180, 180], dtick = 30)
+                y3 ['ticksuffix'] = '°'
+            else:
+                self.add_plotly_df ("real", self.c_real, "y2")
+                y2 ['title'].update (text = "real")
+                self.add_plotly_df ("imag", self.c_imag, "y3")
+                y3 ['title'].update (text = "imag")
+                y3 ['ticksuffix'] = ohm
+        if self.args.swr_show_bands:
+            shapes = layout ['layout']['shapes'] = []
+            for b in self.band:
+                l, h = self.band [b]
+                d = dict \
+                    ( type       = 'rect'
+                    , yref       = 'paper'
+                    , x0         = max (l, self.min_f)
+                    , y0         = 0
+                    , x1         = min (h, self.max_f)
+                    , y1         = 1
+                    , fillcolor  = '#CCFFCC'
+                    , line_width = 0
+                    , layer      = 'below'
+                    )
+                fig.add_annotation \
+                    ( x         = (l + h) / 2
+                    , y         = 0.98
+                    , yref      = 'paper'
+                    , text      = '<b>%s</b>' % escape (b)
+                    , showarrow = False
+                    )
+                shapes.append (d)
+        fig.update (layout)
         tg = self.args.target_swr_frequency
         if tg is not None:
             c = self.args.swr_target_color
@@ -1274,6 +1404,23 @@ class SortingArgumentParser (ArgumentParser):
     # end def __init__
 # end class SortingArgumentParser
 
+ham_bands = dict \
+   (( ('70cm', (430.0,  440.0))
+    , ('2m',   (144.0,  146.0))
+    , ('6m',   ( 50.0,   52.0))
+    , ('10m',  ( 28.0,   29.7))
+    , ('12m',  ( 24.89,  24.99))
+    , ('15m',  ( 21.0,   21.45))
+    , ('17m',  ( 18.068, 18.168))
+    , ('20m',  ( 14.0,   14.35))
+    , ('30m',  ( 10.1,   10.15))
+    , ('40m',  (  7.0,    7.2))
+    , ('60m',  (  5.3513, 5.3665))
+    , ('80m',  (  3.5,    3.8))
+    , ('160m', (  1.81,   1.95))
+    , ('630m', (  0.472,  0.479))
+   ))
+
 def main (argv = sys.argv [1:]):
     cmd = SortingArgumentParser ()
     scaling = ['arrl', 'linear', 'linear_db', 'linear_voltage']
@@ -1333,6 +1480,13 @@ def main (argv = sys.argv [1:]):
         , default = 20
         )
     cmd.add_argument \
+        ( '--band'
+        , help    = 'Band to highlight in VSWR plot, default are ham'
+                    ' bands in Austria, Format: name:flow,fhi'
+        , default = []
+        , action  = 'append'
+        )
+    cmd.add_argument \
         ( '--plot-geo', '--geo'
         , help    = 'Plot Geometry'
         , action  = 'store_true'
@@ -1387,6 +1541,21 @@ def main (argv = sys.argv [1:]):
         , default = 'grey'
         )
     cmd.add_argument \
+        ( "--swr-plot-impedance-angle"
+        , help    = "In SWR plot impedance as abs/angle, default is real/imag"
+        , action  = 'store_true'
+        )
+    cmd.add_argument \
+        ( "--swr-show-bands"
+        , help    = "Show (ham-radio) bands in SWR plot"
+        , action  = "store_true"
+        )
+    cmd.add_argument \
+        ( "--swr-show-impedance"
+        , help    = "Show impedance in SWR plot"
+        , action  = "store_true"
+        )
+    cmd.add_argument \
         ( '--title-font-size'
         , help    = 'Title/legend font size in pt '
                     '(currently only used in plotly)'
@@ -1424,6 +1593,25 @@ def main (argv = sys.argv [1:]):
             , action  = 'store_true'
             )
     args = cmd.parse_args (argv)
+    hb = dict (ham_bands)
+    for b in args.band:
+        try:
+            n, r = b.split (':')
+        except ValueError as err:
+            cmd.print_usage ()
+            exit ('Error in band: %s' % err)
+        n = n.strip ()
+        try:
+            l, h = (float (x) for x in r.split (','))
+        except ValueError as err:
+            cmd.print_usage ()
+            exit ('Error in band: %s' % err)
+        if h <= l:
+            if n in hb:
+                del hb [n]
+        else:
+            hb [n] = (l, h)
+    args.band = hb
     if args.decibel_style not in deci_styles:
         cmd.print_usage ()
         exit ('Invalid decibel-style: "%s"' % args.decibel_style)
