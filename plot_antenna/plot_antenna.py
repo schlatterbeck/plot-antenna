@@ -9,8 +9,9 @@ from html import escape
 from bisect import bisect
 from mpl_toolkits.mplot3d import Axes3D
 from argparse import ArgumentParser, HelpFormatter
-from matplotlib import cm, __version__ as matplotlib_version, rcParams
+from matplotlib import cm, __version__ as matplotlib_version, rcParams, ticker
 from matplotlib.widgets import Slider
+from matplotlib.patches import Rectangle
 try:
     import plotly.express as px
     import plotly.graph_objects as go
@@ -22,6 +23,7 @@ except ImportError:
 matplotlib_version_float = float ('.'.join (matplotlib_version.split ('.')[:2]))
 
 Omega = "\u2126"
+ohm = ' %s' % Omega
 
 def blend (color, alpha = 0x80, bg = '#FFFFFF'):
     """ Blend a color with a background color, default white with a
@@ -1131,10 +1133,10 @@ class Gain_Plot:
             in_band = in_band or fmin <= self.min_f and self.max_f <= fmax
             if in_band:
                 self.band [n] = self.args.band [n]
-        return X, Y, real, imag, xabs, xphi
+        return [np.array (v) for v in (X, Y, real, imag, xabs, xphi)]
     # end def prepare_vswr
 
-    def range_y (self, y, min_y = None):
+    def range_y (self, y, min_y = None, as_plotly = False):
         """ Sensible Y range so that all different Y coordinates can
             share a grid.
         """
@@ -1152,24 +1154,38 @@ class Gain_Plot:
         mx = np.ceil (mx)
         for k in 1, 2, 4, 8, 10:
             if mx - mn <= k:
-                return dict \
-                    ( range = np.array ([mn, mn + k]) * 10 ** exp
-                    , dtick = (k / 4) * 10 ** exp
-                    )
-        return dict \
-            ( range = np.array ([mn, mn + 12]) * 10 ** exp
-            , dtick = 3 * 10 ** exp
-            )
+                rng = np.array ([mn, mn + k]) * 10 ** exp
+                tck = (k / 4) * 10 ** exp
+                if as_plotly:
+                    return dict (range = rng, dtick = tck)
+                return rng [0], rng [1], tck
+        rng = np.array ([mn, mn + 12]) * 10 ** exp
+        tck = 3 * 10 ** exp
+        if as_plotly:
+            return dict (range = rng, dtick = tck)
+        return rng [0], rng [1], tck
     # end def range_y
 
     def plot_vswr_matplotlib (self, name):
-        # Color real (phi) ffb329ff imag (abs) ae4141ff
         ax = self.axes [name]
         ax.set_xlabel ('Frequency (MHz)')
-        ax.set_ylabel ('VSWR')
+        ax.set_ylabel ('VSWR', color = self.c_vswr)
         X, Y, real, imag, xabs, xphi = self.prepare_vswr ()
+        strf  = ticker.FormatStrFormatter
+        min_y = min (Y)
+        max_y = max (Y)
         ax.plot (X, Y)
-        ax.grid (color = '0.95')
+        ax.grid (color = blend (self.c_vswr), axis = 'y')
+        ax.grid (color = '#B0B0B0', axis = 'x')
+        ax.tick_params (axis = 'y', colors = self.c_vswr)
+        r1, r2, t = self.range_y (Y, 1)
+        yt = np.arange (r1, r2 + t, t)
+        ax.set (ylim = (r1, r2), yticks = yt)
+        fmt = '%.1f'
+        if t == int (t):
+            fmt = '%.0f'
+        ax.yaxis.set_major_formatter (strf (fmt))
+        #ax.xaxis.set_major_formatter (strf ('%.1f MHz'))
         tg = self.args.target_swr_frequency
         if tg is not None:
             c = self.args.swr_target_color
@@ -1177,6 +1193,52 @@ class Gain_Plot:
         c = self.args.swr_min_color
         if c and c.lower () != 'none':
             ax.axvline (x = self.min_x, color = c, linestyle = 'dashed')
+        if self.args.swr_show_impedance:
+            self.fig.subplots_adjust (right=0.75)
+            ax2 = ax.twinx ()
+            ax3 = ax.twinx ()
+            ax2.tick_params (axis = 'y', colors = self.c_real)
+            ax3.tick_params (axis = 'y', colors = self.c_imag)
+            ax3.spines.right.set_position (("axes", 1.2))
+            if self.args.swr_plot_impedance_angle:
+                ax2.set_ylabel ("|Z|", color = self.c_real)
+                ax2.plot (X, xabs, color = self.c_real)
+                r1, r2, t = self.range_y (xabs)
+                yt = np.arange (r1, r2 + t, t)
+                ax2.set (ylim = (r1, r2), yticks = yt)
+                fmt = '%.1f '
+                if t == int (t):
+                    fmt = '%.0f '
+                ax2.yaxis.set_major_formatter (strf (fmt + ohm))
+                ax3.set_ylabel ("phi (Z)", color = self.c_imag)
+                ax3.plot (X, xphi, color = self.c_imag)
+                yt = np.arange (-180, 180 + 30, 30)
+                ax3.set (ylim = (-180, 180), yticks = yt)
+                ax3.yaxis.set_major_formatter (strf ('%.0f°'))
+            else:
+                ax2.set_ylabel ("real", color = self.c_real)
+                ax2.plot (X, real, color = self.c_real)
+                r1, r2, t = self.range_y (real)
+                yt = np.arange (r1, r2 + t, t)
+                ax2.set (ylim = (r1, r2), yticks = yt)
+                fmt = '%.1f '
+                if t == int (t):
+                    fmt = '%.0f '
+                ax2.yaxis.set_major_formatter (strf (fmt + ohm))
+                ax3.set_ylabel ("imag", color = self.c_imag)
+                ax3.plot (X, imag, color = self.c_imag)
+                r1, r2, t = self.range_y (imag)
+                yt = np.arange (r1, r2 + t, t)
+                ax3.set (ylim = (r1, r2), yticks = yt)
+                fmt = '%.1f '
+                if t == int (t):
+                    fmt = '%.0f '
+                ax3.yaxis.set_major_formatter (strf (fmt + ohm))
+        if self.args.swr_show_bands:
+            y1, y2 = np.array (list (ax.get_ylim ()))
+            for b in self.band:
+                l, h = self.band [b]
+                ax.fill_between ([l, h], y1, y2, color = '#CCFFCC')
     # end def plot_vswr_matplotlib
 
     def add_plotly_df (self, yname, color = None, axisname = None):
@@ -1204,11 +1266,10 @@ class Gain_Plot:
         layout = self.plotly_line_default
         self.add_plotly_df ("VSWR", self.c_vswr)
         y = layout ['layout']['yaxis']
-        y.update (**self.range_y (Y, 1))
+        y.update (**self.range_y (Y, 1, as_plotly = True))
         layout ['layout']['yaxis']['title'].update  (text = "VSWR")
         layout ['layout']['xaxis'].update \
             (title = dict (text = 'Frequency (MHz)'))
-        ohm = ' %s' % Omega
         if self.args.swr_show_impedance:
             y2 = layout ['layout']['yaxis2']
             y2 ['ticksuffix'] = ohm
@@ -1217,17 +1278,17 @@ class Gain_Plot:
                 self.add_plotly_df ("|Z|", self.c_real, "y2")
                 y2 ['title'].update (text = "|Z|")
                 self.add_plotly_df ("phi (Z)", self.c_imag, "y3")
-                y2.update (** self.range_y (xabs))
+                y2.update (** self.range_y (xabs, as_plotly = True))
                 y3 ['title'].update (text = "phi (Z)")
                 y3.update (range = [-180, 180], dtick = 30)
                 y3 ['ticksuffix'] = '°'
             else:
                 self.add_plotly_df ("real", self.c_real, "y2")
                 y2 ['title'].update (text = "real")
-                y2.update (** self.range_y (real))
+                y2.update (** self.range_y (real, as_plotly = True))
                 self.add_plotly_df ("imag", self.c_imag, "y3")
                 y3 ['title'].update (text = "imag")
-                y3.update (** self.range_y (imag))
+                y3.update (** self.range_y (imag, as_plotly = True))
                 y3 ['ticksuffix'] = ohm
         if self.args.swr_show_bands:
             shapes = layout ['layout']['shapes'] = []
