@@ -409,9 +409,10 @@ class Gain_Plot:
                 , colorway   = self.colormap
                 , xaxis = dict
                     ( linecolor   = "#B0B0B0"
-                    , gridcolor   = "#F2F2F2"
+                    , gridcolor   = "#B0B0B0"
                     , domain      = [0, 0.9]
                     , ticksuffix  = ' MHz'
+                    , zeroline    = False
                     )
                 , yaxis = dict
                     ( color       = self.c_vswr
@@ -422,22 +423,24 @@ class Gain_Plot:
 		    , anchor      = "x"
 		    , side        = "left"
                     , hoverformat = '.2f'
+                    , zeroline    = False
                     )
                 , yaxis2 = dict
                     ( color       = self.c_real
                     , linecolor   = self.c_real
-                    , showgrid    = True
+                    , showgrid    = False
                     , gridcolor   = blend (self.c_real)
                     , title       = {}
                     , overlaying  = "y"
 		    , side        = "right"
 		    , anchor      = "x2"
                     , hoverformat = '.1f'
+                    , zeroline    = False
                     )
                 , yaxis3 = dict
                     ( color       = self.c_imag
                     , linecolor   = self.c_imag
-                    , showgrid    = True
+                    , showgrid    = False
                     , gridcolor   = blend (self.c_imag)
                     , title       = {}
                     , overlaying  = "y"
@@ -445,6 +448,7 @@ class Gain_Plot:
 		    , position    = 0.96
 		    , anchor      = "free"
                     , hoverformat = '.1f'
+                    , zeroline    = False
                     )
                 , paper_bgcolor = 'white'
                 , plot_bgcolor  = 'white'
@@ -1130,6 +1134,34 @@ class Gain_Plot:
         return X, Y, real, imag, xabs, xphi
     # end def prepare_vswr
 
+    def range_y (self, y, min_y = None):
+        """ Sensible Y range so that all different Y coordinates can
+            share a grid.
+        """
+        mx = max (y)
+        mn = min_y
+        if min_y is None:
+            mn = min (y)
+        exp = int (np.log (max (abs (mx), abs (mn))) / np.log (10))
+        mx /= 10 ** exp
+        mn /= 10 ** exp
+        assert mx < 10 and abs (mn) < 10
+        # round mn to lower int
+        mn = np.floor (mn)
+        # round mx to higher int
+        mx = np.ceil (mx)
+        for k in 1, 2, 4, 8, 10:
+            if mx - mn <= k:
+                return dict \
+                    ( range = np.array ([mn, mn + k]) * 10 ** exp
+                    , dtick = (k / 4) * 10 ** exp
+                    )
+        return dict \
+            ( range = np.array ([mn, mn + 12]) * 10 ** exp
+            , dtick = 3 * 10 ** exp
+            )
+    # end def range_y
+
     def plot_vswr_matplotlib (self, name):
         # Color real (phi) ffb329ff imag (abs) ae4141ff
         ax = self.axes [name]
@@ -1171,6 +1203,8 @@ class Gain_Plot:
         self.fig = fig = go.Figure()
         layout = self.plotly_line_default
         self.add_plotly_df ("VSWR", self.c_vswr)
+        y = layout ['layout']['yaxis']
+        y.update (**self.range_y (Y, 1))
         layout ['layout']['yaxis']['title'].update  (text = "VSWR")
         layout ['layout']['xaxis'].update \
             (title = dict (text = 'Frequency (MHz)'))
@@ -1183,14 +1217,17 @@ class Gain_Plot:
                 self.add_plotly_df ("|Z|", self.c_real, "y2")
                 y2 ['title'].update (text = "|Z|")
                 self.add_plotly_df ("phi (Z)", self.c_imag, "y3")
+                y2.update (** self.range_y (xabs))
                 y3 ['title'].update (text = "phi (Z)")
                 y3.update (range = [-180, 180], dtick = 30)
                 y3 ['ticksuffix'] = '°'
             else:
                 self.add_plotly_df ("real", self.c_real, "y2")
                 y2 ['title'].update (text = "real")
+                y2.update (** self.range_y (real))
                 self.add_plotly_df ("imag", self.c_imag, "y3")
                 y3 ['title'].update (text = "imag")
+                y3.update (** self.range_y (imag))
                 y3 ['ticksuffix'] = ohm
         if self.args.swr_show_bands:
             shapes = layout ['layout']['shapes'] = []
