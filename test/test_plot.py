@@ -36,6 +36,7 @@ import matplotlib
 # - Version 3.3.4 on python3.9.2  (debian bullseye)
 # - Version 3.5.2 on python3.10.5 (own python build on debian bullseye)
 # - Version 3.6.3 on python3.11.2 (debian bookworm)
+# - Version 3.7.2 on python3.11.2 (debian bookwork in a venv)
 # 
 picture_hashes = dict \
     (( (( ( '3d', dict
@@ -125,11 +126,15 @@ picture_hashes = dict \
        ))
     ))
 
-def check_status (v):
+def check_status_matplotlib (v):
     mpl_v = matplotlib.__version__
     fun = v.__name__
     assert fun.startswith ('test_')
     key = fun [5:]
+    if mpl_v not in picture_hashes [key]:
+        r = 'Not tested for matplotlib version %s' % mpl_v
+        f = pytest.mark.skip (reason = r)
+        return f (v)
     if picture_hashes [key][mpl_v] == 'fail':
         return pytest.mark.xfail (v)
     return v
@@ -162,7 +167,7 @@ class Test_Plot (unittest.TestCase):
         self.assertRaises (ValueError, main, args)
     # end def test_cmdline_err
 
-    @check_status
+    @check_status_matplotlib
     def test_azimuth (self):
         infile = "test/12-el-1deg.pout"
         args = ["--azi", "--out=%s" % self.outfile, infile]
@@ -170,7 +175,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_azimuth
 
-    @check_status
+    @check_status_matplotlib
     def test_azimuth_linear (self):
         infile = "test/12-el-5deg.pout"
         args = [ "--azi", "--scaling-method=linear"
@@ -180,7 +185,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_azimuth_linear
 
-    @check_status
+    @check_status_matplotlib
     def test_azimuth_linear_voltage (self):
         infile = "test/12-el-5deg.pout"
         args = [ "--azi", "--scaling-method=linear_voltage"
@@ -190,7 +195,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_azimuth_linear_voltage
 
-    @check_status
+    @check_status_matplotlib
     def test_azimuth_db (self):
         infile = "test/12-el-5deg.pout"
         args = [ "--azi", "--scaling-method=linear_db"
@@ -200,7 +205,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_azimuth_db
 
-    @check_status
+    @check_status_matplotlib
     def test_elevation (self):
         infile = "test/12-el-1deg.pout"
         args = ["--ele", "--out=%s" % self.outfile, infile]
@@ -208,7 +213,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_elevation
 
-    @check_status
+    @check_status_matplotlib
     def test_3d (self):
         infile = "test/12-el-5deg.pout"
         args = ["--plot3d", "--out=%s" % self.outfile, infile]
@@ -216,7 +221,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_3d
 
-    @check_status
+    @check_status_matplotlib
     def test_plotall (self):
         infile = "test/inverted-v.pout"
         args = ["--out=%s" % self.outfile, infile]
@@ -224,7 +229,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_3d
 
-    @check_status
+    @check_status_matplotlib
     def test_vswr (self):
         infile = "test/inverted-v.pout"
         args = ["--vswr", "--out=%s" % self.outfile, infile]
@@ -232,7 +237,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_3d
 
-    @check_status
+    @check_status_matplotlib
     def test_vswr_extended (self):
         infile = "test/u29gbuv0.nout"
         args = ["--vswr", "--swr-show-bands", "--swr-show-impedance"
@@ -242,7 +247,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_3d
 
-    @check_status
+    @check_status_matplotlib
     def test_basic_output (self):
         infile = "test/vdipole-01.bout"
         args = ["--ele", "--out=%s" % self.outfile, infile]
@@ -250,7 +255,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_3d
 
-    @check_status
+    @check_status_matplotlib
     def test_gainfile (self):
         """ Original basic implementation can save gains to a file
         """
@@ -260,7 +265,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_3d
 
-    @check_status
+    @check_status_matplotlib
     def test_necfile (self):
         """ We also can parse nec2c output
         """
