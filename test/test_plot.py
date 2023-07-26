@@ -125,6 +125,7 @@ class Test_Plot (unittest.TestCase):
             (( 'f62eb7f542e5c06be02b8d87085ef6be9a131c1a'
              , '9c2c0dbee27318762c446622e80565523cc9f27e'
              , '7d484d3007d44ad3d5346cc5c2d99e78dbe8a8cd'
+             , '3f12165407b4676ba6e8706a50b7d9b3e31a7cc7'
             ))
         infile = "test/12-el-1deg.pout"
         args = ["--ele", "--out=%s" % self.outfile, infile]
@@ -150,6 +151,7 @@ class Test_Plot (unittest.TestCase):
             (( 'c6983522ea756b757ae6a4017f59b7bf73d8a444'
              , '199e352d9c78d1eff20ff58bc006af686f978660'
              , 'bee0a8e420912fefafe112cfbbbd1bb45a6430e1'
+             , '939a52f8a1fa0e96579edccac772ea231c964175'
             ))
         infile = "test/inverted-v.pout"
         args = ["--out=%s" % self.outfile, infile]
@@ -162,6 +164,7 @@ class Test_Plot (unittest.TestCase):
             (( 'e0bc3945aeb821cdf03ee47d26d9d225752f046c'
              , 'c7d51ae7e9b99db01efca23883b0082f9a2e5cea'
              , '0249df3ae9c7f526e1701b8d1bc94841718c4c6c'
+             , '8cb9304e4eee21c6144ed40de34daf56395a035c'
             ))
         infile = "test/inverted-v.pout"
         args = ["--vswr", "--out=%s" % self.outfile, infile]
@@ -169,12 +172,11 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs (checksums)
     # end def test_3d
 
-    @min_matplotlib ('3.1.0')
+    @min_matplotlib ('3.4.0')
     def test_vswr_extended (self):
         checksums = set \
             (( 'db4eb15db1b4534bd8d7bfbc29b9d63262e5a673'
              , '7fbe093c9a406f7c25ec2e14ce0f5e157e5532aa'
-             , ''
             ))
         infile = "test/u29gbuv0.nout"
         args = ["--vswr", "--swr-show-bands", "--swr-show-impedance"
@@ -189,6 +191,7 @@ class Test_Plot (unittest.TestCase):
             (( '45d9090245f3addcc7eba873863a595513b5ffd9'
              , '3b34a4da877eb65ec27d6245e70108f7f6847343'
              , '0ca9dfa12999c91a86ad5c623bc81eb90ef26fdc'
+             , '21c6b094b727213378859e8ff78816de50bb7801'
             ))
         infile = "test/vdipole-01.bout"
         args = ["--ele", "--out=%s" % self.outfile, infile]
@@ -203,6 +206,7 @@ class Test_Plot (unittest.TestCase):
             (( 'e355a35ce2a6c23b0ba1ea3e59eb9363f764acff'
              , '5e205938df4dae1b731eff91f9bd1d0ab0c56f8d'
              , '2815d3fa423e30484cabc8c2e982d32c5bbcb891'
+             , '81f427701288da7988b26e67d78ee968a88fbc58'
             ))
         infile = "test/DP001.GNN"
         args = ["--ele", "--angle-azi=60", "--out=%s" % self.outfile, infile]
@@ -217,6 +221,7 @@ class Test_Plot (unittest.TestCase):
             (( '3271f513a3cae9c3733c773d94e3fde65d988a39'
              , '4fbbdd11deb57eef1364b8cbd5fdefe2775ad8d5'
              , 'c8e63a94f1c73f6649c612187bfd047e38137945'
+             , 'bcebf95b5635edbf4104cc6d4c332544df854382'
             ))
         infile = "test/12-el.nout"
         args = ["--azi", "--swr", "--out=%s" % self.outfile, infile]
