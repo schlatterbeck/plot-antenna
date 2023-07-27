@@ -1414,7 +1414,9 @@ class Gain_Plot:
             d.update (config = config)
         if script is not None:
             d.update (post_script = script)
-        if self.args.export_html:
+        if self.args.output_file and self.save_format:
+            fig.write_image (self.args.output_file, format = 'png')
+        elif self.args.export_html:
             fn = self.args.export_html + '-' + name + '.html'
             fig.write_html (fn, **d)
         else:

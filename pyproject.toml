@@ -52,5 +52,11 @@ classifiers     = [
 [project.scripts]
 plot-antenna = 'plot_antenna.plot_antenna:main'
 
+[project.optional-dependencies]
+test = [
+      'pytest'
+    , 'kaleido'
+    ]
+
 [tool.setuptools.dynamic]
 version = {attr = "plot_antenna.Version.VERSION"}
