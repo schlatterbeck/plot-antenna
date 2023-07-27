@@ -355,6 +355,7 @@ class Gain_Plot:
         self.dpi         = args.dpi
         self.filename    = args.filename
         self.outfile     = args.output_file
+        self.save_format = getattr (args, 'save_format', None)
         self.f           = None
         self.with_slider = args.with_slider
         self.wireframe   = args.wireframe
@@ -864,7 +865,10 @@ class Gain_Plot:
                 except KeyError:
                     pass
         if self.outfile:
-            fig.savefig (self.outfile)
+            d = {}
+            if self.save_format:
+                d.update (format = self.save_format)
+            fig.savefig (self.outfile, **d)
         else:
             plt.show ()
     # end def plot_matplotlib
@@ -1526,7 +1530,11 @@ ham_bands = dict \
     , ('630m', (  0.472,  0.479))
    ))
 
-def main (argv = sys.argv [1:]):
+def main (argv = sys.argv [1:], pic_io = None):
+    """ The pic_io argument is for testing:
+        We put the picture into that file-like object if the pic_io
+        is not None.
+    """
     cmd = SortingArgumentParser ()
     scaling = ['arrl', 'linear', 'linear_db', 'linear_voltage']
     cmd.add_argument \
@@ -1722,7 +1730,10 @@ def main (argv = sys.argv [1:]):
         exit ('Invalid decibel-style: "%s"' % args.decibel_style)
     if not hasattr (args, 'with_slider'):
         args.with_slider = False
-    gp   = Gain_Plot (args)
+    if pic_io is not None:
+        args.output_file = pic_io
+        args.save_format = 'png'
+    gp = Gain_Plot (args)
 
     # Default is all
     if  (   not args.azimuth and not args.elevation

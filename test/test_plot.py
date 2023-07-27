@@ -27,7 +27,10 @@ import pytest
 import filecmp
 import hashlib
 import inspect
+from PIL import Image
+from bisect import bisect_left
 from plot_antenna.plot_antenna import main
+from io import BytesIO
 import matplotlib
 
 # These are the generated pictures hashed by matplotlib version
@@ -40,125 +43,134 @@ import matplotlib
 # 
 picture_hashes = dict \
     (( (( ( '3d', dict
-            (( ('3.0.2', '67d5f8a4cd30154754ececc0e8d22c6eba92a7c5')
+            (( ('3.0.2', 'c76bc62f80106d79020af66d5ba30cbe32133255')
             ,  ('3.3.4', 'bf0053e8fafbf5b7a28fc1dd3f40a66a500fb797')
-            ,  ('3.5.2', 'f106dccd3ccff1938d47664cba5f659b2560d27b')
-            ,  ('3.6.3', '32e55a243512a33dd7d8d4569666e3e9f27f9c25')
+            ,  ('3.5.2', '4e3be16ee73e143ab6d8e925d37fd54b9a3bb5a5')
+            ,  ('3.6.3', '5e21cd5e0bf83b94a606588c4e7a3f3e52d1d152')
             ))
           )
        ,  ( 'azimuth', dict
-            (( ('3.0.2', '6f7e3004927ddf2623c87d5976ca19053b1b342d')
+            (( ('3.0.2', '81248b39e78fe707f59d732c8556a34e164add4f')
             ,  ('3.3.4', '4ba633ef2d286cbfd07bc0f845dbd92f6063bd72')
-            ,  ('3.5.2', 'cae02fba0ce8d6c84397d70f8f267adfce2334b7')
-            ,  ('3.6.3', 'a0aa181e7d42364a5f44d56dcccd26fa0b5a660c')
+            ,  ('3.5.2', '600221ff9765308069809711a779ea970de301b0')
+            ,  ('3.6.3', '55f83891c3c297962e24def9d5e5d565eee58a72')
             ))
           )
        ,  ( 'azimuth_db', dict
-            (( ('3.0.2', '046df401b907a6e7adf7cc84862de3a19a599981')
+            (( ('3.0.2', '91e3b791966caf17b1d5189d1ffe49d81fe753db')
             ,  ('3.3.4', '650172f1ea286ed2eeeda9060c035ffc65f7a640')
-            ,  ('3.5.2', '4737bd0c3e172014f7b13d3da3f4e165c223fb6a')
-            ,  ('3.6.3', '213dcf0dcfc22ce680aab2018404f31596b589f4')
+            ,  ('3.5.2', 'e24bb294450bf3e666ab9e5d38fe659fa12bbd89')
+            ,  ('3.6.3', '853f2e33d97921a1e29b168af6c72d9102857f0c')
             ))
           )
        ,  ( 'azimuth_linear', dict
-            (( ('3.0.2', '74c1316ce650cd8554b58e6581a019c2e3223275')
+            (( ('3.0.2', '660561393437790656f2be40f9959f6ee0040e18')
             ,  ('3.3.4', '6edb2e10c24cd218ea6f7b544950b99cfc58bbd8')
-            ,  ('3.5.2', 'bdb0566025474fdb3ff2bba6a3040a44b8ac0d43')
-            ,  ('3.6.3', '460c7d594304af83bfe9bba1cb06817e87e4e34a')
+            ,  ('3.5.2', '283645c8cd248738afde0c512bbca6ddfe676118')
+            ,  ('3.6.3', 'b294d474542522e2a598d37b8ce959faa253f164')
             ))
           )
        ,  ( 'azimuth_linear_voltage', dict
-            (( ('3.0.2', '269dfb8af39cd2e6bfde89868a0ef7ee83c76e9b')
+            (( ('3.0.2', 'ca0eb9b31d54d453dabc3be5594de15abd13881c')
             ,  ('3.3.4', 'a0c104f1e87b98bc4c5d716c65486ca1c37755aa')
-            ,  ('3.5.2', '3102f95ceca5c3767f4b064def9ef1e701eb05db')
-            ,  ('3.6.3', '11fae3c94c61eef98117a3fc7ac40d42afed8b9c')
+            ,  ('3.5.2', '957e8bf68dc3155f9a98c3d7061049d797107f6f')
+            ,  ('3.6.3', '8852f490bb274471a1d4453ab0ddfe29a689ae9f')
             ))
           )
        ,  ( 'basic_output', dict
-            (( ('3.0.2', '45d9090245f3addcc7eba873863a595513b5ffd9')
+            (( ('3.0.2', 'b9362d804d86a8be3870c460a162aae974a05955')
             ,  ('3.3.4', '21c6b094b727213378859e8ff78816de50bb7801')
-            ,  ('3.5.2', '0ca9dfa12999c91a86ad5c623bc81eb90ef26fdc')
-            ,  ('3.6.3', '3b34a4da877eb65ec27d6245e70108f7f6847343')
+            ,  ('3.5.2', '3ce7634a5bcff4d6a9591c68f4604325938bb5ed')
+            ,  ('3.6.3', '931a908acb08eeebda27e680b12737cdbae95f1e')
             ))
           )
        ,  ( 'elevation', dict
-            (( ('3.0.2', 'f62eb7f542e5c06be02b8d87085ef6be9a131c1a')
+            (( ('3.0.2', 'fd0b835fde4c976a88fd4c8419fc47ab3788f151')
             ,  ('3.3.4', '3f12165407b4676ba6e8706a50b7d9b3e31a7cc7')
-            ,  ('3.5.2', '7d484d3007d44ad3d5346cc5c2d99e78dbe8a8cd')
-            ,  ('3.6.3', '9c2c0dbee27318762c446622e80565523cc9f27e')
+            ,  ('3.5.2', 'abcbfd16546a9aa4e02781955b3e2253cf01d0aa')
+            ,  ('3.6.3', '12a547c561497050af11bd72a1e55561b00a2f5b')
             ))
           )
        ,  ( 'gainfile', dict
-            (( ('3.0.2', 'e355a35ce2a6c23b0ba1ea3e59eb9363f764acff')
+            (( ('3.0.2', 'a07f6166e68ee408a4131c866ebbe3f4bc94aa59')
             ,  ('3.3.4', '81f427701288da7988b26e67d78ee968a88fbc58')
-            ,  ('3.5.2', '2815d3fa423e30484cabc8c2e982d32c5bbcb891')
-            ,  ('3.6.3', '5e205938df4dae1b731eff91f9bd1d0ab0c56f8d')
+            ,  ('3.5.2', '1ef7b62708590b2bcd6ed5afc23da63f111f9f84')
+            ,  ('3.6.3', 'e7a5888d1499494818eaf110f30cc7c06e7e3543')
             ))
           )
        ,  ( 'necfile', dict
-            (( ('3.0.2', '3271f513a3cae9c3733c773d94e3fde65d988a39')
+            (( ('3.0.2', '1d18ad114babc69bf459cabc0a46b7fa16aa8e74')
             ,  ('3.3.4', 'bcebf95b5635edbf4104cc6d4c332544df854382')
-            ,  ('3.5.2', 'c8e63a94f1c73f6649c612187bfd047e38137945')
-            ,  ('3.6.3', '4fbbdd11deb57eef1364b8cbd5fdefe2775ad8d5')
+            ,  ('3.5.2', '493b0ec0cca1b872c426e6e06634593cbc81bfff')
+            ,  ('3.6.3', 'b2e735ae8f7fb2190c5c97fc44ead3299f8e86a4')
             ))
           )
        ,  ( 'plotall', dict
-            (( ('3.0.2', 'c6983522ea756b757ae6a4017f59b7bf73d8a444')
+            (( ('3.0.2', 'cf2d56853c9b9eba5b46188c96b4f990276d9f85')
             ,  ('3.3.4', '939a52f8a1fa0e96579edccac772ea231c964175')
-            ,  ('3.5.2', 'bee0a8e420912fefafe112cfbbbd1bb45a6430e1')
-            ,  ('3.6.3', '199e352d9c78d1eff20ff58bc006af686f978660')
+            ,  ('3.5.2', '568a0c3c7a2cc4ceb9c4d9a148420dc71e86dd1a')
+            ,  ('3.6.3', '5a3267e9be54120d4871d724715e0c7fb1a39a25')
             ))
           )
        ,  ( 'vswr', dict
-            (( ('3.0.2', 'e0bc3945aeb821cdf03ee47d26d9d225752f046c')
+            (( ('3.0.2', '197c45672a1de86c6c6ca9cbfc2c899c28d0690e')
             ,  ('3.3.4', '8cb9304e4eee21c6144ed40de34daf56395a035c')
-            ,  ('3.5.2', '0249df3ae9c7f526e1701b8d1bc94841718c4c6c')
-            ,  ('3.6.3', 'c7d51ae7e9b99db01efca23883b0082f9a2e5cea')
+            ,  ('3.5.2', '71b310cf1c733d3f41272d27bde5a9cce69a8c9b')
+            ,  ('3.6.3', '6495b1f3e7c6c55ba06071dec4b24bc6bc9a3d59')
             ))
           )
        ,  ( 'vswr_extended', dict
             (( ('3.0.2', 'fail')
             ,  ('3.3.4', 'fail')
-            ,  ('3.5.2', '7fbe093c9a406f7c25ec2e14ce0f5e157e5532aa')
-            ,  ('3.6.3', 'db4eb15db1b4534bd8d7bfbc29b9d63262e5a673')
+            ,  ('3.5.2', '1bae165fbff4bce9597c629b89a858a6b207d72f')
+            ,  ('3.6.3', 'fd6d0ff1b4be457d7a09f7e9743901c5e0356500')
             ))
           )
        ))
     ))
 
-def check_status_matplotlib (v):
+def get_picture_hash (function_name):
+    """ Get picture hash from picture_hashes via the function name and
+        the current matplotlib version.
+    """
+    assert function_name.startswith ('test_')
+    key = function_name [5:]
     mpl_v = matplotlib.__version__
-    fun = v.__name__
-    assert fun.startswith ('test_')
-    key = fun [5:]
     if mpl_v not in picture_hashes [key]:
-        r = 'Not tested for matplotlib version %s' % mpl_v
-        f = pytest.mark.skip (reason = r)
-        return f (v)
-    if picture_hashes [key][mpl_v] == 'fail':
+        versions = list (sorted (picture_hashes [key]))
+        idx = bisect_left (versions, mpl_v)
+        if idx == 0:
+            return [picture_hashes [key][versions [idx]]]
+        l = len (versions)
+        if idx >= l - 1:
+            # Return last *two*, seems sometimes it matches an earlier version
+            return [picture_hashes [key][i] for i in versions [l - 2:]]
+        return [picture_hashes [key][versions [i]] for i in (idx, idx + 1)]
+    return [picture_hashes [key][mpl_v]]
+# end def get_picture_hash
+
+def check_status_matplotlib (v):
+    hashes = get_picture_hash (v.__name__)
+    if 'fail' in hashes:
         return pytest.mark.xfail (v)
     return v
+# end def check_status_matplotlib
 
 class Test_Plot (unittest.TestCase):
-    outfile = 'zoppel-test.png'
 
     @pytest.fixture (autouse=True)
     def cleanup (self):
+        self.pic_io = BytesIO ()
         yield
-        try:
-            os.unlink (self.outfile)
-        except FileNotFoundError:
-            pass
     # end def cleanup
 
     def compare_cs (self):
         calling_fun = inspect.stack () [1].function
-        assert calling_fun.startswith ('test_')
-        key = calling_fun [5:]
-        with open (self.outfile, 'rb') as f:
-            contents = f.read ()
-        cs = hashlib.sha1 (contents).hexdigest ()
-        assert cs == picture_hashes [key][matplotlib.__version__]
+        img = Image.open (self.pic_io, formats = ['png'])
+        io  = BytesIO ()
+        img.save (io, format = 'ppm')
+        cs = hashlib.sha1 (io.getvalue ()).hexdigest ()
+        assert cs in get_picture_hash (calling_fun)
     # end def compare_cs
 
     def test_cmdline_err (self):
@@ -170,70 +182,64 @@ class Test_Plot (unittest.TestCase):
     @check_status_matplotlib
     def test_azimuth (self):
         infile = "test/12-el-1deg.pout"
-        args = ["--azi", "--out=%s" % self.outfile, infile]
-        main (args)
+        args = ["--azi", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_azimuth
 
     @check_status_matplotlib
     def test_azimuth_linear (self):
         infile = "test/12-el-5deg.pout"
-        args = [ "--azi", "--scaling-method=linear"
-               , "--out=%s" % self.outfile, infile
-               ]
-        main (args)
+        args = ["--azi", "--scaling-method=linear", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_azimuth_linear
 
     @check_status_matplotlib
     def test_azimuth_linear_voltage (self):
         infile = "test/12-el-5deg.pout"
-        args = [ "--azi", "--scaling-method=linear_voltage"
-               , "--out=%s" % self.outfile, infile
-               ]
-        main (args)
+        args = ["--azi", "--scaling-method=linear_voltage", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_azimuth_linear_voltage
 
     @check_status_matplotlib
     def test_azimuth_db (self):
         infile = "test/12-el-5deg.pout"
-        args = [ "--azi", "--scaling-method=linear_db"
-               , "--out=%s" % self.outfile, infile
-               ]
-        main (args)
+        args = ["--azi", "--scaling-method=linear_db", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_azimuth_db
 
     @check_status_matplotlib
     def test_elevation (self):
         infile = "test/12-el-1deg.pout"
-        args = ["--ele", "--out=%s" % self.outfile, infile]
-        main (args)
+        args = ["--ele", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_elevation
 
     @check_status_matplotlib
     def test_3d (self):
         infile = "test/12-el-5deg.pout"
-        args = ["--plot3d", "--out=%s" % self.outfile, infile]
-        main (args)
+        args = ["--plot3d", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
     @check_status_matplotlib
     def test_plotall (self):
         infile = "test/inverted-v.pout"
-        args = ["--out=%s" % self.outfile, infile]
-        main (args)
+        args = [infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
     @check_status_matplotlib
     def test_vswr (self):
         infile = "test/inverted-v.pout"
-        args = ["--vswr", "--out=%s" % self.outfile, infile]
-        main (args)
+        args = ["--vswr", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
@@ -241,17 +247,17 @@ class Test_Plot (unittest.TestCase):
     def test_vswr_extended (self):
         infile = "test/u29gbuv0.nout"
         args = ["--vswr", "--swr-show-bands", "--swr-show-impedance"
-               , "--system-impedance=4050", "--out=%s" % self.outfile, infile
+               , "--system-impedance=4050", infile
                ]
-        main (args)
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
     @check_status_matplotlib
     def test_basic_output (self):
         infile = "test/vdipole-01.bout"
-        args = ["--ele", "--out=%s" % self.outfile, infile]
-        main (args)
+        args = ["--ele", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
@@ -260,8 +266,8 @@ class Test_Plot (unittest.TestCase):
         """ Original basic implementation can save gains to a file
         """
         infile = "test/DP001.GNN"
-        args = ["--ele", "--angle-azi=60", "--out=%s" % self.outfile, infile]
-        main (args)
+        args = ["--ele", "--angle-azi=60", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
@@ -270,8 +276,8 @@ class Test_Plot (unittest.TestCase):
         """ We also can parse nec2c output
         """
         infile = "test/12-el.nout"
-        args = ["--azi", "--swr", "--out=%s" % self.outfile, infile]
-        main (args)
+        args = ["--azi", "--swr", infile]
+        main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
