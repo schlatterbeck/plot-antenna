@@ -1240,7 +1240,7 @@ class Gain_Plot:
         strf  = ticker.FormatStrFormatter
         min_y = min (Y)
         max_y = max (Y)
-        ax.plot (X, Y)
+        ax.plot (X, Y, linewidth = 2)
         ax.grid (color = blend (self.c_vswr), axis = 'y')
         ax.grid (color = '#B0B0B0', axis = 'x')
         ax.tick_params (axis = 'y', colors = self.c_vswr)
@@ -1265,23 +1265,23 @@ class Gain_Plot:
             ax3.spines.right.set_position (("axes", 1.2))
             if self.args.swr_plot_impedance_angle:
                 ax2.set_ylabel ("|Z|", color = self.c_real)
-                ax2.plot (X, xabs, color = self.c_real)
+                ax2.plot (X, xabs, color = self.c_real, linewidth = 0.9)
                 pr = Plot_Range (xabs)
                 ax2.set (**pr.as_matplot ())
                 ax2.yaxis.set_major_formatter (pr.fmt (ohm))
                 ax3.set_ylabel ("phi (Z)", color = self.c_imag)
-                ax3.plot (X, xphi, color = self.c_imag)
+                ax3.plot (X, xphi, color = self.c_imag, linewidth = 0.9)
                 yt = np.arange (-180, 180 + 30, 30)
                 ax3.set (ylim = (-180, 180), yticks = yt)
                 ax3.yaxis.set_major_formatter (strf ('%.0f°'))
             else:
                 ax2.set_ylabel ("Z (real)", color = self.c_real)
-                ax2.plot (X, real, color = self.c_real)
+                ax2.plot (X, real, color = self.c_real, linewidth = 0.9)
                 pr = Plot_Range (real)
                 ax2.set (**pr.as_matplot ())
                 ax2.yaxis.set_major_formatter (pr.fmt (ohm))
                 ax3.set_ylabel ("Z (imag)", color = self.c_imag)
-                ax3.plot (X, imag, color = self.c_imag)
+                ax3.plot (X, imag, color = self.c_imag, linewidth = 0.9)
                 pr = Plot_Range (imag)
                 ax3.set (**pr.as_matplot ())
                 ax3.yaxis.set_major_formatter (pr.fmt (ohm))
@@ -1299,12 +1299,17 @@ class Gain_Plot:
                     )
     # end def plot_vswr_matplotlib
 
-    def add_plotly_df (self, yname, color = None, axisname = None):
+    def add_plotly_df (self, yname, color = None, axisname = None, **kw):
         """ Add yname in dataframe self.df to self.fig
         """
-        d  = dict (x = self.df ["Frequency"], y = self.df [yname], name = yname)
+        d = dict (x = self.df ["Frequency"], y = self.df [yname], name = yname)
+        d.update (line = dict (width = 1.5))
+        d.update (kw)
         if color:
-            d.update (line = dict (color = color))
+            if 'line' in d:
+                d ['line']['color'] = color
+            else:
+                d.update (line = dict (color = color))
         if axisname:
             d.update (yaxis = axisname)
         self.fig.add_trace (go.Scatter (**d))
@@ -1322,7 +1327,8 @@ class Gain_Plot:
         self.df = df
         self.fig = fig = go.Figure ()
         layout = self.plotly_line_default
-        self.add_plotly_df ("VSWR", self.c_vswr)
+        lstyle = dict (color = self.c_vswr, width = 3.5)
+        self.add_plotly_df ("VSWR", line = lstyle)
         y = layout ['layout']['yaxis']
         y.update (**Plot_Range (Y, 1).as_plotly ())
         layout ['layout']['yaxis']['title'].update  (text = "VSWR")
