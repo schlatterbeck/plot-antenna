@@ -44,7 +44,10 @@ setup \
     , license          = license
     , author           = "Ralf Schlatterbeck"
     , author_email     = "rsc@runtux.com"
-    , install_requires = ['matplotlib', 'numpy']
+    , install_requires = \
+        [ 'matplotlib', 'numpy', 'pandas', 'plotly'
+        , 'pysmithplot@git+https://github.com/schlatterbeck/pySmithPlot.git'
+        ]
     , packages         = ['plot_antenna']
     , platforms        = 'Any'
     , url              = "https://github.com/schlatterbeck/plot-antenna"

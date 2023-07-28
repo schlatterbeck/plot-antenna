@@ -12,6 +12,7 @@ from argparse import ArgumentParser, HelpFormatter
 from matplotlib import cm, __version__ as matplotlib_version, rcParams, ticker
 from matplotlib.widgets import Slider
 from matplotlib.patches import Rectangle
+from smithplot.smithaxes import SmithAxes
 try:
     import plotly.express as px
     import plotly.graph_objects as go
@@ -817,9 +818,23 @@ class Gain_Plot:
                     p = {}
                 elif name == 'plot3d' or name == 'plot_geo':
                     p = dict (projection = '3d')
+                elif name == 'plot_smith':
+                    p = dict \
+                        ( projection = 'smith'
+                        , grid_major_fancy  = True
+                        , grid_minor_enable = True
+                        , grid_minor_fancy  = True
+                        , axes_impedance = self.args.system_impedance
+                        , axes_normalize = True
+                        , axes_normalize_label = True
+                        , axes_labelpos = -1.5-1.1j
+                        )
                 d [name] = p
                 a [name] = dict (arg = count + 1)
                 count += 1
+        if len (d) > 4:
+            args       = [2, 3]
+            figsize    = [x * 2 / dpi, y * 3 / dpi]
         if len (d) > 2:
             args       = [2, 2]
             figsize    = [x * 2 / dpi, y * 2 / dpi]
@@ -1177,6 +1192,7 @@ class Gain_Plot:
         z0   = self.impedance
         X    = []
         Y    = []
+        Z    = []
         imag = []
         real = []
         xabs = []
@@ -1191,6 +1207,7 @@ class Gain_Plot:
             xphi.append (np.angle (z) * 180 / np.pi)
             X.append (f)
             Y.append ((1 + rho) / (1 - rho))
+            Z.append (z)
         min_idx = np.argmin (Y)
         self.min_x = X [min_idx]
         if self.args.target_swr_frequency:
@@ -1211,14 +1228,14 @@ class Gain_Plot:
             in_band = in_band or fmin <= self.min_f and self.max_f <= fmax
             if in_band:
                 self.band [n] = self.args.band [n]
-        return [np.array (v) for v in (X, Y, real, imag, xabs, xphi)]
+        return [np.array (v) for v in (X, Y, real, imag, xabs, xphi, Z)]
     # end def prepare_vswr
 
     def plot_vswr_matplotlib (self, name):
         ax = self.axes [name]
         ax.set_xlabel ('Frequency (MHz)')
         ax.set_ylabel ('VSWR', color = self.c_vswr)
-        X, Y, real, imag, xabs, xphi = self.prepare_vswr ()
+        X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
         strf  = ticker.FormatStrFormatter
         min_y = min (Y)
         max_y = max (Y)
@@ -1285,7 +1302,7 @@ class Gain_Plot:
     # end def add_plotly_df
 
     def plot_vswr_plotly (self, name):
-        X, Y, real, imag, xabs, xphi = self.prepare_vswr ()
+        X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
         df = pd.DataFrame ()
         df ['Frequency'] = X
         df ['VSWR']      = Y
@@ -1420,7 +1437,7 @@ class Gain_Plot:
     # end def plot_geo_matplotlib
 
     def plot_smith_plotly (self, name):
-        X, Y, real, imag, xabs, xphi = self.prepare_vswr ()
+        X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
         real_norm = real / self.args.system_impedance
         imag_norm = imag / self.args.system_impedance
         text = ['%.2f MHz' % x for x in X]
@@ -1444,6 +1461,13 @@ class Gain_Plot:
         fig.layout.title.text = 'Smith chart for %s' % self.title
         self.show_plotly (fig, name)
     # end def plot_smith_plotly
+
+    def plot_smith_matplotlib (self, name):
+        X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
+        ax = self.axes [name]
+        d  = dict (markevery = 1, datatype  = 'Z', markersize = 2)
+        ax.plot (Z, **d)
+    # end def plot_smith_matplotlib
 
     def show_plotly (self, fig, name, script = None):
         """ We can pass a config option into fig.show and fig.write_html,
