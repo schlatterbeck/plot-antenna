@@ -1245,6 +1245,7 @@ class Gain_Plot:
         ax.grid (color = '#B0B0B0', axis = 'x')
         ax.tick_params (axis = 'y', colors = self.c_vswr)
         pr = Plot_Range (Y, 1)
+        max_y_r = pr.rng [1]
         ax.set (**pr.as_matplot ())
         ax.yaxis.set_major_formatter (pr.fmt ())
         #ax.xaxis.set_major_formatter (strf ('%.1f MHz'))
@@ -1289,6 +1290,13 @@ class Gain_Plot:
             for b in self.band:
                 l, h = self.band [b]
                 ax.fill_between ([l, h], y1, y2, color = '#CCFFCC')
+                pos = ((l + h) / 2, 0.90 * max_y_r)
+                ax.annotate \
+                    ( '%s\nband' % b
+                    , xytext = pos
+                    , xy     = pos
+                    , ha     = 'center'
+                    )
     # end def plot_vswr_matplotlib
 
     def add_plotly_df (self, yname, color = None, axisname = None):
