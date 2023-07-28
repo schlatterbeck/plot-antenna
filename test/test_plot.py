@@ -212,8 +212,12 @@ picture_hashes = dict \
           )
        ,  ( 'smith_plotly', dict
             (( ('5.4.0',  '7f74b48395846dc1a3db412bdc62f1d6a36c856f')
+            ,  ('5.9.0',  '08a25bf4d189bb5ce63b07e834218d9d3d5ae6a2')
             ,  ('5.10.0', '7f74b48395846dc1a3db412bdc62f1d6a36c856f')
-            ,  ('5.15.0', '7f74b48395846dc1a3db412bdc62f1d6a36c856f')
+            ,  ('5.15.0', [ '7f74b48395846dc1a3db412bdc62f1d6a36c856f'
+                          , '08a25bf4d189bb5ce63b07e834218d9d3d5ae6a2'
+                          ]
+               )
             ))
           )
        ,  ( 'vswr', dict
