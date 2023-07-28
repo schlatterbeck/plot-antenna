@@ -1275,12 +1275,12 @@ class Gain_Plot:
                 ax3.set (ylim = (-180, 180), yticks = yt)
                 ax3.yaxis.set_major_formatter (strf ('%.0f°'))
             else:
-                ax2.set_ylabel ("real", color = self.c_real)
+                ax2.set_ylabel ("Z (real)", color = self.c_real)
                 ax2.plot (X, real, color = self.c_real)
                 pr = Plot_Range (real)
                 ax2.set (**pr.as_matplot ())
                 ax2.yaxis.set_major_formatter (pr.fmt (ohm))
-                ax3.set_ylabel ("imag", color = self.c_imag)
+                ax3.set_ylabel ("Z (imag)", color = self.c_imag)
                 ax3.plot (X, imag, color = self.c_imag)
                 pr = Plot_Range (imag)
                 ax3.set (**pr.as_matplot ())
@@ -1315,8 +1315,8 @@ class Gain_Plot:
         df = pd.DataFrame ()
         df ['Frequency'] = X
         df ['VSWR']      = Y
-        df ['real']      = real
-        df ['imag']      = imag
+        df ['Z (real)']  = real
+        df ['Z (imag)']  = imag
         df ['|Z|']       = xabs
         df ['phi (Z)']   = xphi
         self.df = df
@@ -1341,11 +1341,11 @@ class Gain_Plot:
                 y3.update (range = [-180, 180], dtick = 30)
                 y3 ['ticksuffix'] = '°'
             else:
-                self.add_plotly_df ("real", self.c_real, "y2")
-                y2 ['title'].update (text = "real")
+                self.add_plotly_df ("Z (real)", self.c_real, "y2")
+                y2 ['title'].update (text = "Z (real)")
                 y2.update (**Plot_Range (real).as_plotly ())
-                self.add_plotly_df ("imag", self.c_imag, "y3")
-                y3 ['title'].update (text = "imag")
+                self.add_plotly_df ("Z (imag)", self.c_imag, "y3")
+                y3 ['title'].update (text = "Z (imag)")
                 y3.update (**Plot_Range (imag).as_plotly ())
                 y3 ['ticksuffix'] = ohm
         if self.args.swr_show_bands:
