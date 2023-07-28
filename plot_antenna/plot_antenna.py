@@ -474,6 +474,7 @@ class Gain_Plot:
                     , gridcolor   = "#B0B0B0"
                     , domain      = [0, 0.9]
                     , ticksuffix  = ' MHz'
+                    , tickformat  = '.1f'
                     , zeroline    = False
                     )
                 , yaxis = dict
@@ -574,7 +575,7 @@ class Gain_Plot:
                 )
             )
         return d
-    # end def plotly_polar_default
+    # end def plotly_smith_default
 
     def all_gains (self):
         xyz = None
