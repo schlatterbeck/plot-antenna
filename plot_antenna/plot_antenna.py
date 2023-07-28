@@ -342,7 +342,10 @@ def nearest_angle_idx (angles, dst_angle):
 class Gain_Plot:
     fig_x = 512
     fig_y = 384
-    plot_names   = ('azimuth', 'elevation', 'plot_vswr', 'plot3d', 'plot_geo')
+    plot_names   = \
+        ( 'azimuth', 'elevation'
+        , 'plot_vswr', 'plot3d', 'plot_geo', 'plot_smith'
+        )
     update_names = set (('azimuth', 'elevation', 'plot3d'))
     font_sans    = \
         "Helvetica, Nimbus Sans, Liberation Sans, Open Sans, arial, sans-serif"
@@ -373,13 +376,15 @@ class Gain_Plot:
         if matplotlib_version_float < 3.5:
             self.with_slider = False
         # Default title from filename
-        self.title       = os.path.splitext \
-            (os.path.basename (args.filename)) [0]
+        self.title = os.path.splitext (os.path.basename (args.filename)) [0]
         # This might override title
         self.gdata = {}
         self.geo = []
         # This populates gdata:
         self.read_file ()
+        # If there is a title option it wins:
+        if self.args.title:
+            self.title = self.args.title
         self.frequencies = []
         self.maxg = None
         theta_idx = {}
@@ -553,6 +558,22 @@ class Gain_Plot:
             )
         return d
     # end def plotly_3d_default
+
+    @property
+    def plotly_smith_default (self):
+        d = dict \
+            ( layout = dict
+                ( title = dict
+                    ( font = dict
+                        ( family = self.font_sans
+                        , color  = "#010101"
+                        , size   = 20
+                        )
+                    )
+                )
+            )
+        return d
+    # end def plotly_polar_default
 
     def all_gains (self):
         xyz = None
@@ -1273,7 +1294,7 @@ class Gain_Plot:
         df ['|Z|']       = xabs
         df ['phi (Z)']   = xphi
         self.df = df
-        self.fig = fig = go.Figure()
+        self.fig = fig = go.Figure ()
         layout = self.plotly_line_default
         self.add_plotly_df ("VSWR", self.c_vswr)
         y = layout ['layout']['yaxis']
@@ -1397,6 +1418,32 @@ class Gain_Plot:
             x, y, z = g.T
             ax.plot (x, y, z)
     # end def plot_geo_matplotlib
+
+    def plot_smith_plotly (self, name):
+        X, Y, real, imag, xabs, xphi = self.prepare_vswr ()
+        real_norm = real / self.args.system_impedance
+        imag_norm = imag / self.args.system_impedance
+        text = ['%.2f MHz' % x for x in X]
+        data = np.stack ([real, imag], axis=-1)
+        tpl = \
+            ( '%%{text}<br>'
+              'real: %%{real:.2f} (%%{customdata[0]:.1f} %s)<br>'
+              'imag: %%{imag:.2f} (%%{customdata[1]:.1f} %s)'
+              '<extra></extra>'
+            ) % (Omega, Omega)
+        self.fig = fig = go.Figure ()
+        smith = go.Scattersmith \
+            ( text          = text
+            , imag          = imag_norm
+            , real          = real_norm
+            , hovertemplate = tpl
+            , customdata    = data
+            )
+        fig.add_trace (smith)
+        fig.update (self.plotly_smith_default)
+        fig.layout.title.text = 'Smith chart for %s' % self.title
+        self.show_plotly (fig, name)
+    # end def plot_smith_plotly
 
     def show_plotly (self, fig, name, script = None):
         """ We can pass a config option into fig.show and fig.write_html,
@@ -1607,6 +1654,11 @@ def main (argv = sys.argv [1:], pic_io = None):
         , action  = 'store_true'
         )
     cmd.add_argument \
+        ( '--plot-smith', '--smith'
+        , help    = 'Plot impedances in Smith chart'
+        , action  = 'store_true'
+        )
+    cmd.add_argument \
         ( '--output-file'
         , help    = 'Output file, default is interactive'
         )
@@ -1669,6 +1721,11 @@ def main (argv = sys.argv [1:], pic_io = None):
         ( "--swr-show-impedance"
         , help    = "Show impedance in SWR plot"
         , action  = "store_true"
+        )
+    cmd.add_argument \
+        ( '--title'
+        , help    = 'Title for plot, overrides filename or '
+                    'information in parsed file'
         )
     cmd.add_argument \
         ( '--title-font-size'
@@ -1740,6 +1797,7 @@ def main (argv = sys.argv [1:], pic_io = None):
     # Default is all
     if  (   not args.azimuth and not args.elevation
         and not args.plot3d  and not args.plot_vswr and not args.plot_geo
+        and not args.plot_smith
         ):
         args.plot3d = args.elevation = args.azimuth = args.plot_vswr = True
     gp.plot ()
