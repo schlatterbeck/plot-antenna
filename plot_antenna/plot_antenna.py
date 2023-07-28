@@ -1441,7 +1441,7 @@ class Gain_Plot:
         X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
         real_norm = real / self.args.system_impedance
         imag_norm = imag / self.args.system_impedance
-        text = ['%.2f MHz' % x for x in X]
+        text = ['%.1f MHz' % x for x in X]
         data = np.stack ([real, imag], axis=-1)
         tpl = \
             ( '%%{text}<br>'
