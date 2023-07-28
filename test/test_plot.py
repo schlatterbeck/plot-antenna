@@ -204,6 +204,18 @@ picture_hashes = dict \
             ,  ('3.6.3', '5a3267e9be54120d4871d724715e0c7fb1a39a25')
             ))
           )
+       ,  ( 'smith', dict
+            (( ('3.0.2', 'dfa7f621afc3037fbdbc9c795e6452672b1dd3c7')
+            ,  ('3.5.2', 'ebe551b3aa8ccb2ba20b90e50338efb66af3e24b')
+            ,  ('3.6.3', '0c7cfae41d1002c5e75f31df6180f3c8e5d15581')
+            ))
+          )
+       ,  ( 'smith_plotly', dict
+            (( ('5.4.0',  '7f74b48395846dc1a3db412bdc62f1d6a36c856f')
+            ,  ('5.10.0', '7f74b48395846dc1a3db412bdc62f1d6a36c856f')
+            ,  ('5.15.0', '7f74b48395846dc1a3db412bdc62f1d6a36c856f')
+            ))
+          )
        ,  ( 'vswr', dict
             (( ('3.0.2', '197c45672a1de86c6c6ca9cbfc2c899c28d0690e')
             ,  ('3.3.4', '6495b1f3e7c6c55ba06071dec4b24bc6bc9a3d59')
@@ -496,5 +508,22 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_necfile_swr_plotly
+
+    @check_status_matplotlib
+    def test_smith (self):
+        infile = "test/u29gbuv0.nout"
+        args = ["--smith", "--system-impedance=4050", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_smith
+
+    def test_smith_plotly (self):
+        """ We also can parse nec2c output
+        """
+        infile = "test/u29gbuv0.nout"
+        args = ["--smith", "--system-impedance=4050", "-S", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_smith_plotly
 
 # end class Test_Plot
