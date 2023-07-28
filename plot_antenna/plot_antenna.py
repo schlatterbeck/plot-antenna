@@ -1358,7 +1358,7 @@ class Gain_Plot:
                     ( x         = (l + h) / 2
                     , y         = 0.98
                     , yref      = 'paper'
-                    , text      = '<b>%s</b>' % escape (b)
+                    , text      = '<b>%s<br>band</b>' % escape (b)
                     , showarrow = False
                     )
                 shapes.append (d)
