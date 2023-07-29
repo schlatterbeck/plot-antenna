@@ -473,7 +473,7 @@ class Gain_Plot:
                     ( linecolor   = "#B0B0B0"
                     , gridcolor   = "#B0B0B0"
                     , domain      = [0, 0.9]
-                    , ticksuffix  = ' MHz'
+                    #, ticksuffix  = ' MHz'
                     , tickformat  = '.1f'
                     , zeroline    = False
                     )
@@ -1234,7 +1234,7 @@ class Gain_Plot:
 
     def plot_vswr_matplotlib (self, name):
         ax = self.axes [name]
-        ax.set_xlabel ('Frequency')
+        ax.set_xlabel ('Frequency (MHz)')
         ax.set_ylabel ('VSWR', color = self.c_vswr)
         X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
         strf  = ticker.FormatStrFormatter
@@ -1248,7 +1248,7 @@ class Gain_Plot:
         max_y_r = pr.rng [1]
         ax.set (**pr.as_matplot ())
         ax.yaxis.set_major_formatter (pr.fmt ())
-        ax.xaxis.set_major_formatter (strf ('%.1f MHz'))
+        #ax.xaxis.set_major_formatter (strf ('%.1f MHz'))
         tg = self.args.target_swr_frequency
         if tg is not None:
             c = self.args.swr_target_color
@@ -1332,7 +1332,8 @@ class Gain_Plot:
         y = layout ['layout']['yaxis']
         y.update (**Plot_Range (Y, 1).as_plotly ())
         layout ['layout']['yaxis']['title'].update  (text = "VSWR")
-        layout ['layout']['xaxis'].update (title = dict (text = 'Frequency'))
+        layout ['layout']['xaxis'].update \
+            (title = dict (text = 'Frequency (MHz)'))
         if self.args.swr_show_impedance:
             y2 = layout ['layout']['yaxis2']
             y2 ['ticksuffix'] = ohm
