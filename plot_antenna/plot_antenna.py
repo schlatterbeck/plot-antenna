@@ -1477,8 +1477,8 @@ class Gain_Plot:
         if self.args.system_impedance == int (self.args.system_impedance):
             fmt = '$Z_0 = %.0f\,\Omega$'
         fig.add_annotation \
-            ( x         = 0.15
-            , y         = 0.2
+            ( x         = 0.10
+            , y         = 0.15
             , xref      = 'paper'
             , yref      = 'paper'
             , text      = fmt % self.args.system_impedance
