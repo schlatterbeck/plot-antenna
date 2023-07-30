@@ -1448,6 +1448,9 @@ class Gain_Plot:
         ax.set_xlim (*xr)
         ax.set_ylim (*yr)
         ax.set_zlim (*zr)
+        ax.set_xlabel ('X')
+        ax.set_ylabel ('Y')
+        ax.set_zlabel ('Z')
         for g in self.geo:
             g = np.array (g)
             x, y, z = g.T
