@@ -1430,12 +1430,6 @@ class Gain_Plot:
                 ( xaxis = dict (range = xr)
                 , yaxis = dict (range = yr)
                 , zaxis = dict (range = zr)
-                #, domain = dict (x = [0.0, 0.5], y = [0.0, 0.5]) ??
-                , camera = dict
-                    ( up     = dict (x = 0,    y = 0,    z = 1)
-                    , center = dict (x = 0,    y = 0,    z = 0)
-                    , eye    = dict (x = 0.01, y = 0.01, z = 1)
-                    )
                 )
             )
         self.show_plotly (fig, name)
