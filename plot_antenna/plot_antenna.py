@@ -544,17 +544,21 @@ class Gain_Plot:
                         ( linecolor      = "#B0B0B0"
                         , gridcolor      = "#B0B0B0"
                         , showbackground = False
+                        , tickformat     = '.3f'
                         )
                     , yaxis = dict
                         ( linecolor      = "#B0B0B0"
                         , gridcolor      = "#B0B0B0"
                         , showbackground = False
+                        , tickformat     = '.3f'
                         )
                     , zaxis = dict
                         ( linecolor      = "#B0B0B0"
                         , gridcolor      = "#B0B0B0"
                         , showbackground = False
+                        , tickformat     = '.3f'
                         )
+                    , aspectratio = dict (x=1, y=1, z=1)
                     )
                 )
             )
@@ -1183,7 +1187,6 @@ class Gain_Plot:
                     ( xaxis = dict (range = xr, showticklabels = False)
                     , yaxis = dict (range = yr, showticklabels = False)
                     , zaxis = dict (range = zr, showticklabels = False)
-                    , aspectratio = dict (x=1, y=1, z=1)
                     )
                 )
             self.show_plotly (fig, name, script = self.plotly_3d_script)
