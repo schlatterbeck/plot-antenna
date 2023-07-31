@@ -160,7 +160,7 @@ Thanks Rob!
 - The aspect ratio in 3D plotly plots is now correct. It used to be a
   little too wide in the X direction
 - Add Smith chart display
-- Options to add the impedance (either as real/imag or |Z|/phi (Z)) in
+- Options to add the impedance (either as real/imag or \|Z\|/phi (Z)) in
   the VSWR plot
 - Option to show the ham radio bands in the VSWR plot
 - Show loads and excitation(s) in geo plot, add ground to geo plot
