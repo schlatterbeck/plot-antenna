@@ -407,6 +407,7 @@ class Gain_Plot:
         self.geo = []
         self.seg_by_tag = {}
         self.segments = []
+        self.has_ground = False
         # This populates gdata:
         self.read_file ()
         # If there is a title option it wins:
@@ -652,6 +653,9 @@ class Gain_Plot:
                 if line.startswith ('NUMBER OF LOADS'):
                     status = 'load'
                     continue
+                if line.startswith ('ENVIRONMENT'):
+                    gp = int (line.split (':', 1) [-1])
+                    self.has_ground = gp < 0
                 if line.startswith ('DATA CARD No:'):
                     ll = line.split ()
                     if ll [4] == 'EX':
@@ -679,6 +683,8 @@ class Gain_Plot:
                                 n = m
                             for i in range (n, m + 1):
                                 Loaded_Segment (segs [i], name)
+                    if ll [4] == 'GN':
+                        self.has_ground = True
                 if status != 'start' and not line:
                     status  = 'start'
                     continue
@@ -1472,30 +1478,36 @@ class Gain_Plot:
         self.show_plotly (fig, name)
     # end def plot_vswr_plotly
 
-    def scene_ranges (self, matrix = None):
+    def scene_ranges (self, matrix = None, add_ground = False):
         """ Create cubic bounding box to force equal aspect ratio
             If matrix is not given, we concatenate *all* gains.
         """
         if matrix is None:
             matrix = self.all_gains ()
         x, y, z = matrix
+        min_x = x.min ()
+        max_x = x.max ()
+        min_y = y.min ()
+        max_y = y.max ()
+        min_z = z.min ()
+        max_z = z.max ()
+        if add_ground and self.has_ground and min_z > 0:
+            min_z = 0
         max_range = np.array \
-            ( [ x.max () - x.min ()
-              , y.max () - y.min ()
-              , z.max () - z.min ()
-              ]
-            ).max() / 2.0
-        mid_x = (x.max () + x.min ()) / 2
-        mid_y = (y.max () + y.min ()) / 2
-        mid_z = (z.max () + z.min ()) / 2
+            ([ max_x - min_x, max_y - min_y, max_z - min_z ]).max() / 2.0
+        mid_x = (max_x + min_x) / 2
+        mid_y = (max_y + min_y) / 2
+        mid_z = (max_z + min_z) / 2
         xr = np.array ([mid_x - max_range, mid_x + max_range])
         yr = np.array ([mid_y - max_range, mid_y + max_range])
         zr = np.array ([mid_z - max_range, mid_z + max_range])
+        if add_ground and self.has_ground and min_z == 0:
+            zr = np.array ([min_z, min_z + 2 * max_range])
         return np.array ([xr, yr, zr])
     # end def scene_ranges
 
     def plot_geo_plotly (self, name):
-        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T)
+        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T, True)
         fig = px.line_3d ()
         fig.update (self.plotly_3d_default)
         geo = []
@@ -1525,6 +1537,12 @@ class Gain_Plot:
                 , zaxis = dict (range = zr)
                 )
             )
+        if self.has_ground:
+            x, y = np.meshgrid (xr, yr)
+            z = np.zeros (x.shape)
+            d = dict (showscale = False, colorscale = ['#6cbe6c'] * 2)
+            d.update (opacity = 0.9)
+            fig.add_trace (go.Surface (x = x, y = y, z = z, **d))
         fig.layout.legend = dict (itemsizing = 'constant')
         self.show_plotly (fig, name)
     # end def plot_geo_plotly
@@ -1532,7 +1550,7 @@ class Gain_Plot:
     def plot_geo_matplotlib (self, name):
         ax = self.axes [name]
         # equal aspect ratio
-        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T)
+        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T, True)
         ax.set_xlim (*xr)
         ax.set_ylim (*yr)
         ax.set_zlim (*zr)
@@ -1551,6 +1569,11 @@ class Gain_Plot:
             coord = np.array (coord, dtype = float)
             x, y, z = coord.T
             ax.scatter (x, y, z, color = self.colormap [i + 1], marker = 'o')
+        if self.has_ground:
+            x, y = np.meshgrid (xr, yr)
+            z = np.zeros (x.shape)
+            d = dict (color = '#6cbe6c', alpha = 0.9)
+            ax.plot_surface (x, y, z, **d)
     # end def plot_geo_matplotlib
 
     def plot_smith_plotly (self, name):
