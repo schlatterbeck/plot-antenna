@@ -149,6 +149,36 @@ segments (e.g. with a capacity) are not shown.
 Release Notes
 -------------
 
+v1.7: Add Smith charts, optionally show impedance and band in VSWR plots
+
+Many of the changes in this and several previous versions were suggested
+by Rob Banfield, DM1CM: Adding the bands and impedance to the VSWR plot
+are his idea as well as adding a Smith chart. Due to his attention to
+detail this release corrects a lot of rough edges of previous versions.
+Thanks Rob!
+
+- The aspect ratio in 3D plotly plots is now correct. It used to be a
+  little too wide in the X direction
+- Add Smith chart display
+- Options to add the impedance (either as real/imag or |Z|/phi (Z)) in
+  the VSWR plot
+- Option to show the ham radio bands in the VSWR plot
+- Show loads and excitation(s) in geo plot, add ground to geo plot
+- Margin of 3D plots in plotly are much wider now by default and can be
+  configured with an option
+- The style how the gain is displayed in the plotly 3D color bar can now
+  be configured to save space (either relative or absolute gain in dB or
+  dBi, the default is both)
+- When there is only one frequency in the 3D plot, remove the frequency
+  legend
+- Add LICENSE file and pyproject.toml for newer install mechanisms in
+  python
+- Add tests for plotly output
+- Use ppm images for the tests, the previously-used png images did
+  contain the matplotlib version and thus were different for each
+  version -- the ppm images do not have that problem, there are still
+  many differences with different matplotlib versions
+
 v1.6: More SWR plot changes
 
 - Make SWR-plot vertical line colors configurable
