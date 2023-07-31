@@ -175,6 +175,22 @@ picture_hashes = dict \
                )
             ))
           )
+       ,  ( 'geo', dict
+            (( ('3.0.2', '56ad1694ca4ed49ff464422a0f5cec5fb77119f7')
+            ,  ('3.3.4', '')
+            ,  ('3.5.2', 'ba0c3a3394dc0c83f9d2b9c3b6edb9f3011d0652')
+            ,  ('3.6.3', 'a66e3c22867ca368dd3345d173d6406499769f2b')
+            ))
+          )
+       ,  ( 'geo_plotly', dict
+            (( ('5.4.0',  '6999bcc50b434382ebadc2cd3b415666d2fa6a59')
+            ,  ('5.10.0', '6999bcc50b434382ebadc2cd3b415666d2fa6a59')
+            ,  ('5.15.0', [ '6999bcc50b434382ebadc2cd3b415666d2fa6a59'
+                          , '0f38af5e533e34ddce0a212c2f376d1454df1c6d'
+                          ]
+               )
+            ))
+          )
        ,  ( 'necfile', dict
             (( ('3.0.2', 'c6f672d460e81f5f14cf69d0d9d793b41ac8a7f3')
             ,  ('3.3.4', '36e0de54ff41c41f88530572fdcf712c77596cda')
@@ -293,7 +309,7 @@ def check_status_matplotlib (v):
 # end def check_status_matplotlib
 
 class Test_Plot (unittest.TestCase):
-    debug = False
+    debug = True
 
     @pytest.fixture (autouse=True)
     def cleanup (self):
@@ -529,5 +545,19 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_smith_plotly
+
+    def test_geo (self):
+        infile = "test/inve802B.pout"
+        args = ["--geo", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo
+
+    def test_geo_plotly (self):
+        infile = "test/inve802B.pout"
+        args = ["--geo", "-S", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo
 
 # end class Test_Plot
