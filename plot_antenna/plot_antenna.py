@@ -340,6 +340,30 @@ def nearest_angle_idx (angles, dst_angle):
     return idx - 1
 # end def nearest_angle_idx
 
+class Loaded_Segment:
+    """ A segment either loaded with an impedance or an excitation
+    """
+
+    by_name = {}
+    nec_types = \
+	[ 'Series RLC, absolute'
+        , 'Parallel RLC, absolute'
+        , 'Series RLC, per m'
+        , 'Parallel RLC, per m'
+        , 'Impedance'
+        , 'Wire conductivity'
+	]
+
+    def __init__ (self, coord, name):
+        self.coord = coord
+        self.name  = name
+        if name not in self.by_name:
+            self.by_name [name] = []
+        self.by_name [name].append (self)
+    # end def __init__
+
+# end class Loaded_Segment
+
 class Gain_Plot:
     fig_x = 512
     fig_y = 384
@@ -381,6 +405,8 @@ class Gain_Plot:
         # This might override title
         self.gdata = {}
         self.geo = []
+        self.seg_by_tag = {}
+        self.segments = []
         # This populates gdata:
         self.read_file ()
         # If there is a title option it wins:
@@ -620,13 +646,63 @@ class Gain_Plot:
                     status = 'necgeo'
                     necidx = {}
                     continue
+                if line.startswith ('NO. OF SOURCES'):
+                    status = 'source'
+                    continue
+                if line.startswith ('NUMBER OF LOADS'):
+                    status = 'load'
+                    continue
+                if line.startswith ('DATA CARD No:'):
+                    ll = line.split ()
+                    if ll [4] == 'EX':
+                        typ, tag, n = (int (x) for x in ll [5:8])
+                        if typ in (0, 5):
+                            assert n >= 1
+                            name  = 'Excitation'
+                            if tag == 0:
+                                seg = self.segments [n - 1]
+                            else:
+                                seg = self.seg_by_tag [tag][n - 1]
+                            Loaded_Segment (seg, name)
+                    if ll [4] == 'LD':
+                        typ, tag, m, n = (int (x) for x in ll [5:9])
+                        name = Loaded_Segment.nec_types [typ]
+                        if tag == 0:
+                            segs = self.segments
+                        else:
+                            segs = self.seg_by_tag [tag]
+                        if m == 0:
+                            for s in segs:
+                                Loaded_Segment (s, name)
+                        else:
+                            if n == 0:
+                                n = m
+                            for i in range (n, m + 1):
+                                Loaded_Segment (segs [i], name)
                 if status != 'start' and not line:
                     status  = 'start'
                     continue
                 if status == 'geo':
                     x, y, z, r, e1, e2, n = line.split ()
+                    n = int (n)
+                    self.seg_by_tag [n] = np.array ([x, y, z])
                     self.geo [-1].append ([float (a) for a in (x, y, z)])
                     continue
+                if status == 'load':
+                    if line.startswith ('PULSE'):
+                        txt, l = line.split (':', 1)
+                        tag, r, x = l.split (',')
+                        tag = int (tag)
+                        name = txt.split (',', 1) [-1]
+                        if name == 'RESISTANCE,REACTANCE':
+                            name = 'Impedance'
+                        Loaded_Segment (self.seg_by_tag [tag], name)
+                if status == 'source':
+                    if line.startswith ('PULSE'):
+                        l = line.split (':')[1]
+                        tag, v, p = l.split (',')
+                        tag = int (tag)
+                        Loaded_Segment (self.seg_by_tag [tag], 'Excitation')
                 if status == 'wire':
                     l = line.split ()
                     wires [-1].append ([float (a) for a in l [:3]])
@@ -638,7 +714,12 @@ class Gain_Plot:
                     ll = line.split ()
                     idx = int (ll [0])
                     x, y, z, l, alpha, beta = (float (a) for a in ll [1:7])
+                    tag = int (ll [-1])
+                    if tag not in self.seg_by_tag:
+                        self.seg_by_tag [tag] = []
                     mid = np.array ([x, y, z])
+                    self.seg_by_tag [tag].append (mid)
+                    self.segments.append (mid)
                     prev, cur, next = (int (a) for a in ll [8:11])
                     if prev == 0 or abs (prev) > idx:
                         self.geo.append ([])
@@ -1417,14 +1498,26 @@ class Gain_Plot:
         xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T)
         fig = px.line_3d ()
         fig.update (self.plotly_3d_default)
-        # We may want to draw everything in the same color and
-        # remove the individual scatter3d from the legend
-        # but then, maybe not
+        geo = []
         for n, g in enumerate (self.geo):
-            g = np.array (g)
-            d = dict (mode = 'lines', connectgaps = False)
-            d ['x'], d ['y'], d ['z'] = g.T
-            fig.add_scatter3d (**d)
+            if geo:
+                geo.append ([np.nan, np.nan, np.nan])
+            geo.extend (g)
+        geo = np.array (geo)
+        d = dict (mode = 'lines', connectgaps = False, name = 'Geometry')
+        d.update (marker = dict (color = self.colormap [0]))
+        d ['x'], d ['y'], d ['z'] = geo.T
+        fig.add_trace (go.Scatter3d (**d))
+        for i, name in enumerate (sorted (Loaded_Segment.by_name)):
+            segs = Loaded_Segment.by_name [name]
+            coord = []
+            for s in segs:
+                coord.append (s.coord)
+            coord = np.array (coord, dtype = float)
+            x, y, z = coord.T
+            marker = dict (color = self.colormap [i + 1], size = 3)
+            d = dict (marker = marker, name = name, mode = 'markers')
+            fig.add_trace (go.Scatter3d (x = x, y = y, z = z, **d))
         fig.layout.scene.update \
             ( dict
                 ( xaxis = dict (range = xr)
@@ -1432,6 +1525,7 @@ class Gain_Plot:
                 , zaxis = dict (range = zr)
                 )
             )
+        fig.layout.legend = dict (itemsizing = 'constant')
         self.show_plotly (fig, name)
     # end def plot_geo_plotly
 
@@ -1448,7 +1542,15 @@ class Gain_Plot:
         for g in self.geo:
             g = np.array (g)
             x, y, z = g.T
-            ax.plot (x, y, z)
+            ax.plot (x, y, z, color = self.colormap [0])
+        for i, name in enumerate (sorted (Loaded_Segment.by_name)):
+            segs = Loaded_Segment.by_name [name]
+            coord = []
+            for s in segs:
+                coord.append (s.coord)
+            coord = np.array (coord, dtype = float)
+            x, y, z = coord.T
+            ax.scatter (x, y, z, color = self.colormap [i + 1], marker = 'o')
     # end def plot_geo_matplotlib
 
     def plot_smith_plotly (self, name):
