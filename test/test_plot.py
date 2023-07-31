@@ -177,7 +177,7 @@ picture_hashes = dict \
           )
        ,  ( 'geo', dict
             (( ('3.0.2', '56ad1694ca4ed49ff464422a0f5cec5fb77119f7')
-            ,  ('3.3.4', '')
+            ,  ('3.3.4', 'a66e3c22867ca368dd3345d173d6406499769f2b')
             ,  ('3.5.2', 'ba0c3a3394dc0c83f9d2b9c3b6edb9f3011d0652')
             ,  ('3.6.3', 'a66e3c22867ca368dd3345d173d6406499769f2b')
             ))
@@ -309,7 +309,7 @@ def check_status_matplotlib (v):
 # end def check_status_matplotlib
 
 class Test_Plot (unittest.TestCase):
-    debug = True
+    debug = False
 
     @pytest.fixture (autouse=True)
     def cleanup (self):
