@@ -794,7 +794,7 @@ class Gain_Plot:
                     # Original Basic implementation gain output
                     if line.endswith (',D'):
                         delimiter = ','
-                        f = 0.0
+                        f = self.args.default_frequency
                         gdata = self.gdata [f] = Gain_Data (self, f)
                         continue
                     if line.startswith ('ANGLE') and line.endswith ('(DB)'):
@@ -1783,6 +1783,14 @@ def main (argv = sys.argv [1:], pic_io = None):
                     ' one of %s, the default prints the relative value'
                     ' in parentheses' % ', '.join (deci_styles)
         , default = 'both'
+        )
+    cmd.add_argument \
+        ( '--default-frequency'
+        , help    = 'Default frequency for input formats that do not '
+                    'specify a frequency (e.g. the old MININEC gain '
+                    '(.GNN) format)'
+        , type    = float
+        , default = 0.0
         )
     cmd.add_argument \
         ( '--dpi'
