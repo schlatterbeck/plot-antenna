@@ -1786,17 +1786,62 @@ ham_bands = dict \
     , ('630m', (  0.472,  0.479))
    ))
 
-def main (argv = sys.argv [1:], pic_io = None):
-    """ The pic_io argument is for testing:
-        We put the picture into that file-like object if the pic_io
-        is not None.
-    """
-    cmd = SortingArgumentParser ()
-    scaling = ['arrl', 'linear', 'linear_db', 'linear_voltage']
+def options_general (cmd = None):
+    if cmd is None:
+        cmd = SortingArgumentParser ()
     cmd.add_argument \
-        ( 'filename'
-        , help    = 'File to parse and plot'
+        ( '--dpi'
+        , help    = 'Resolution for matplotlib, default = %(default)s'
+        , type    = int
+        , default = 80
         )
+    cmd.add_argument \
+        ( '--title'
+        , help    = 'Title for plot, overrides filename or '
+                    'information in parsed file'
+        )
+    cmd.add_argument \
+        ( '--output-file'
+        , help    = 'Output file, default is interactive'
+        )
+    if px is not None:
+        cmd.add_argument \
+            ( "-H", "--export-html"
+            , help    = "Filename-prefix to export graphics as html, "
+                        "type of graphics (azimuth, elevation, ..) is appended"
+            )
+        cmd.add_argument \
+            ( "--html-export-option"
+            , help    = "Option passed to write_html include_plotlyjs option, "
+                        "default is to include all javascript in generated "
+                        "output file. To leave out the javascript, specify "
+                        "'directory', this needs the plotly.min.js in the "
+                        "same directory as the output. See plotly docs for "
+                        "details."
+            )
+        cmd.add_argument \
+            ( "-S", "--show-in-browser"
+            , help    = "Produce a plot shown interactively in a running "
+                        "browser"
+            , action  = 'store_true'
+            )
+        cmd.add_argument \
+            ( "--show-plotly-logo"
+            , help    = "Show plotly logo in menu"
+            , action  = 'store_true'
+            )
+    return cmd
+# end def options_general
+
+deci_styles = ('absolute', 'relative', 'both')
+
+def options_gain (cmd = None):
+    """ Options that have to do with displaying gains, i.e.
+        plotting of azimuth/elevation or 3d
+    """
+    scaling = ['arrl', 'linear', 'linear_db', 'linear_voltage']
+    if cmd is None:
+        cmd = SortingArgumentParser ()
     cmd.add_argument \
         ( '--azimuth'
         , help    = 'Do an azimuth plot'
@@ -1808,7 +1853,6 @@ def main (argv = sys.argv [1:], pic_io = None):
                     'maximum gain angle'
         , type    = float
         )
-    deci_styles = ('absolute', 'relative', 'both')
     cmd.add_argument \
         ( '--decibel-style'
         , help    = 'Decibel style for plotly 3D color bar,'
@@ -1823,12 +1867,6 @@ def main (argv = sys.argv [1:], pic_io = None):
                     '(.GNN) format), if no unit (e.g. GHz) is given '
                     'it defaults to MHz'
         , default = 0.0
-        )
-    cmd.add_argument \
-        ( '--dpi'
-        , help    = 'Resolution for matplotlib, default = %(default)s'
-        , type    = int
-        , default = 80
         )
     cmd.add_argument \
         ( '--elevation'
@@ -1857,27 +1895,6 @@ def main (argv = sys.argv [1:], pic_io = None):
         , default = 20
         )
     cmd.add_argument \
-        ( '--band'
-        , help    = 'Band to highlight in VSWR plot, default are ham'
-                    ' bands in Austria, Format: name:flow,fhi'
-        , default = []
-        , action  = 'append'
-        )
-    cmd.add_argument \
-        ( '--plot-geo', '--geo'
-        , help    = 'Plot Geometry'
-        , action  = 'store_true'
-        )
-    cmd.add_argument \
-        ( '--plot-smith', '--smith'
-        , help    = 'Plot impedances in Smith chart'
-        , action  = 'store_true'
-        )
-    cmd.add_argument \
-        ( '--output-file'
-        , help    = 'Output file, default is interactive'
-        )
-    cmd.add_argument \
         ( '--plot3d', '--3d', '--plot-3d', '--3D'
         , help    = 'Do a 3D plot'
         , action  = 'store_true'
@@ -1893,6 +1910,48 @@ def main (argv = sys.argv [1:], pic_io = None):
         , help    = 'Minimum decibels linear dB scaling, default=%(default)s'
         , type    = float
         , default = -50
+        )
+    cmd.add_argument \
+        ( '--title-font-size'
+        , help    = 'Title/legend font size in pt '
+                    '(currently only used in plotly)'
+        , type    = int
+        )
+    cmd.add_argument \
+        ( '--wireframe'
+        , help    = 'Show 3D plot as a wireframe (not solid)'
+        , action  = 'store_true'
+        )
+    return cmd
+# end def options_gain
+
+def options_geo (cmd = None):
+    """ Options for displaying geometry
+    """
+    if cmd is None:
+        cmd = SortingArgumentParser ()
+    cmd.add_argument \
+        ( '--plot-geo', '--geo'
+        , help    = 'Plot Geometry'
+        , action  = 'store_true'
+        )
+    return cmd
+# end def options_geo
+
+def options_swr (cmd = None):
+    if cmd is None:
+        cmd = SortingArgumentParser ()
+    cmd.add_argument \
+        ( '--band'
+        , help    = 'Band to highlight in VSWR plot, default are ham'
+                    ' bands in Austria, Format: name:flow,fhi'
+        , default = []
+        , action  = 'append'
+        )
+    cmd.add_argument \
+        ( '--plot-smith', '--smith'
+        , help    = 'Plot impedances in Smith chart'
+        , action  = 'store_true'
         )
     cmd.add_argument \
         ( '--system-impedance'
@@ -1937,69 +1996,32 @@ def main (argv = sys.argv [1:], pic_io = None):
         , help    = "Show impedance in SWR plot"
         , action  = "store_true"
         )
-    cmd.add_argument \
-        ( '--title'
-        , help    = 'Title for plot, overrides filename or '
-                    'information in parsed file'
-        )
-    cmd.add_argument \
-        ( '--title-font-size'
-        , help    = 'Title/legend font size in pt '
-                    '(currently only used in plotly)'
-        , type    = int
-        )
-    cmd.add_argument \
-        ( '--wireframe'
-        , help    = 'Show 3D plot as a wireframe (not solid)'
-        , action  = 'store_true'
-        )
-    if px is not None:
-        cmd.add_argument \
-            ( "-H", "--export-html"
-            , help    = "Filename-prefix to export graphics as html, "
-                        "type of graphics (azimuth, elevation, ..) is appended"
-            )
-        cmd.add_argument \
-            ( "--html-export-option"
-            , help    = "Option passed to write_html include_plotlyjs option, "
-                        "default is to include all javascript in generated "
-                        "output file. To leave out the javascript, specify "
-                        "'directory', this needs the plotly.min.js in the "
-                        "same directory as the output. See plotly docs for "
-                        "details."
-            )
-        cmd.add_argument \
-            ( "-S", "--show-in-browser"
-            , help    = "Produce a plot shown interactively in a running "
-                        "browser"
-            , action  = 'store_true'
-            )
-        cmd.add_argument \
-            ( "--show-plotly-logo"
-            , help    = "Show plotly logo in menu"
-            , action  = 'store_true'
-            )
+    return cmd
+# end def options_swr
+
+def process_args (cmd, argv = sys.argv [1:]):
     args = cmd.parse_args (argv)
     hb = dict (ham_bands)
-    for b in args.band:
-        try:
-            n, r = b.split (':')
-        except ValueError as err:
-            cmd.print_usage ()
-            exit ('Error in band: %s' % err)
-        n = n.strip ()
-        try:
-            l, h = (float (x) for x in r.split (','))
-        except ValueError as err:
-            cmd.print_usage ()
-            exit ('Error in band: %s' % err)
-        if h <= l:
-            if n in hb:
-                del hb [n]
-        else:
-            hb [n] = (l, h)
-    args.band = hb
-    if args.default_frequency:
+    if getattr (args, 'band', None) is not None:
+        for b in args.band:
+            try:
+                n, r = b.split (':')
+            except ValueError as err:
+                cmd.print_usage ()
+                exit ('Error in band: %s' % err)
+            n = n.strip ()
+            try:
+                l, h = (float (x) for x in r.split (','))
+            except ValueError as err:
+                cmd.print_usage ()
+                exit ('Error in band: %s' % err)
+            if h <= l:
+                if n in hb:
+                    del hb [n]
+            else:
+                hb [n] = (l, h)
+        args.band = hb
+    if getattr (args, 'default_frequency'):
         df = args.default_frequency.strip ()
         if df.endswith ('Hz'):
             if df [-3] == 'T':
@@ -2014,11 +2036,30 @@ def main (argv = sys.argv [1:], pic_io = None):
                 args.default_frequency = float (df [:-2]) / 1e6
         else:
             args.default_frequency = float (df)
-    if args.decibel_style not in deci_styles:
-        cmd.print_usage ()
-        exit ('Invalid decibel-style: "%s"' % args.decibel_style)
+    if getattr (args, 'decibel_style', None) is not None:
+        if args.decibel_style not in deci_styles:
+            cmd.print_usage ()
+            exit ('Invalid decibel-style: "%s"' % args.decibel_style)
     if not hasattr (args, 'with_slider'):
         args.with_slider = False
+    return args
+# end def process_args
+
+def main (argv = sys.argv [1:], pic_io = None):
+    """ The pic_io argument is for testing:
+        We put the picture into that file-like object if the pic_io
+        is not None.
+    """
+    cmd = options_general ()
+    options_gain (cmd)
+    options_geo  (cmd)
+    options_swr  (cmd)
+    cmd.add_argument \
+        ( 'filename'
+        , help    = 'File to parse and plot'
+        )
+    args = process_args (cmd, argv)
+    # For regression testing:
     if pic_io is not None:
         args.output_file = pic_io
         args.save_format = 'png'
