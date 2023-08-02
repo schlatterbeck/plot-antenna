@@ -7,6 +7,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 from html import escape
 from bisect import bisect
+from itertools import pairwise
 from mpl_toolkits.mplot3d import Axes3D
 from argparse import ArgumentParser, HelpFormatter
 from matplotlib import cm, __version__ as matplotlib_version, rcParams, ticker
@@ -249,6 +250,17 @@ class Gain_Data:
         for theta, phi in sorted (self.pattern):
             thetas.add (theta)
             phis.add   (phi)
+        tdiff = None
+        for a, b in pairwise (sorted (thetas)):
+            if tdiff is None or abs (a - b) > tdiff:
+                tdiff = abs (a - b)
+        self.max_theta_diff = tdiff
+        pdiff = None
+        for a, b in pairwise (sorted (phis)):
+            if pdiff is None or abs (a - b) > pdiff:
+                pdiff = abs (a - b)
+        self.max_phi_diff = pdiff
+
         td = list (sorted (thetas))
         pd = list (sorted (phis))
         self.thetas_d = np.array (td)
@@ -262,7 +274,7 @@ class Gain_Data:
             pidx = pd.index   (phi)
             self.gains [tidx][pidx] = self.pattern [(theta, phi)]
 
-        self.maxg     = np.nanmax (gains)
+        self.maxg = np.nanmax (gains)
         idx = np.unravel_index (np.nanargmax (self.gains), self.gains.shape)
         self.theta_maxidx, self.phi_maxidx = idx
         # Special case: If theta is 0° or 180° recompute phi_maxidx
@@ -305,7 +317,10 @@ class Gain_Data:
         assert idx != self.parent.phi_angle_idx
         eps = 1e-9
         phis = self.phis
-        #assert abs (phis [idx] - phis [self.parent.phi_angle_idx]) - np.pi < eps
+        diff = abs (phis [idx] - phis [self.parent.phi_angle_idx])
+        # This should really be a very low value but if these are
+        # measurements with uneven angles this may be larger
+        assert diff - np.pi <= self.max_phi_diff
         gains2 = self.gains.T [idx].T
         g = np.append (gains1, np.flip (gains2))
         gains = scaler.scale (self.parent.maxg, g)
