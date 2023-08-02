@@ -247,24 +247,30 @@ class Gain_Data:
         phis   = set ()
         gains  = []
         for theta, phi in sorted (self.pattern):
-            gains.append (self.pattern [(theta, phi)])
             thetas.add (theta)
             phis.add   (phi)
-        self.thetas_d = np.array (list (sorted (thetas)))
-        self.phis_d   = np.array (list (sorted (phis)))
+        td = list (sorted (thetas))
+        pd = list (sorted (phis))
+        self.thetas_d = np.array (td)
+        self.phis_d   = np.array (pd)
         self.thetas   = self.thetas_d * np.pi / 180
         self.phis     = self.phis_d   * np.pi / 180
-        self.maxg     = max (gains)
-        self.gains    = np.reshape \
-            (np.array (gains), (self.thetas.shape [0], -1))
-        idx = np.unravel_index (self.gains.argmax (), self.gains.shape)
+
+        gains = self.gains = np.full ((len (thetas), len (phis)), np.NaN)
+        for theta, phi in sorted (self.pattern):
+            tidx = td.index (theta)
+            pidx = pd.index   (phi)
+            self.gains [tidx][pidx] = self.pattern [(theta, phi)]
+
+        self.maxg     = np.nanmax (gains)
+        idx = np.unravel_index (np.nanargmax (self.gains), self.gains.shape)
         self.theta_maxidx, self.phi_maxidx = idx
         # Special case: If theta is 0° or 180° recompute phi_maxidx
         # since in that case all values are the same at that theta angle
         if self.thetas_d [self.theta_maxidx] == 0:
-            self.phi_maxidx = self.gains [1].argmax ()
+            self.phi_maxidx = np.nanargmax (self.gains [1])
         elif self.thetas_d [self.theta_maxidx] == 180:
-            self.phi_maxidx = self.gains [-1].argmax ()
+            self.phi_maxidx = np.nanargmax (self.gains [-1])
         self.theta_max = self.thetas_d [self.theta_maxidx]
         self.phi_max   = self.phis_d   [self.phi_maxidx]
         self.desc      = ['Title: %s' % self.parent.title]
@@ -299,7 +305,7 @@ class Gain_Data:
         assert idx != self.parent.phi_angle_idx
         eps = 1e-9
         phis = self.phis
-        assert abs (phis [idx] - phis [self.parent.phi_angle_idx]) - np.pi < eps
+        #assert abs (phis [idx] - phis [self.parent.phi_angle_idx]) - np.pi < eps
         gains2 = self.gains.T [idx].T
         g = np.append (gains1, np.flip (gains2))
         gains = scaler.scale (self.parent.maxg, g)
@@ -866,7 +872,7 @@ class Gain_Plot:
             f = next (iter (self.gdata))
         self.frequency = f
         self.cur_freq  = f
-        self.impedance = self.args.system_impedance
+        self.impedance = getattr (self.args, 'system_impedance', None)
         if  (  getattr (self.args, 'export_html', None)
             or getattr (self.args, 'show_in_browser', None)
             ):
@@ -879,7 +885,7 @@ class Gain_Plot:
         m = {}
         self.data = self.gdata [f]
         for name in self.plot_names:
-            if getattr (self.args, name):
+            if getattr (self.args, name, None):
                 method = getattr (self, name, None)
                 if method is None:
                     method = getattr (self, name + '_plotly', None)
@@ -940,7 +946,7 @@ class Gain_Plot:
         a = {}
         count = 0
         for name in self.plot_names:
-            if getattr (self.args, name):
+            if getattr (self.args, name, None):
                 p = dict (projection = 'polar')
                 if name == 'plot_vswr':
                     p = {}
