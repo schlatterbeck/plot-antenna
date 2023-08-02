@@ -219,6 +219,21 @@ class Plot_Range:
 
 # end class Plot_Range:
 
+def format_f (f, precision = 3):
+    fmt = '%%.%df ' % precision
+    if f < 1e-3:
+        ff = (fmt + 'Hz') % (f * 1e6)
+    elif f < 1:
+        ff = (fmt + 'kHz') % (f * 1e3)
+    elif f >= 1e6:
+        ff = (fmt + 'THz') % (f / 1e6)
+    elif f >= 1e3:
+        ff = (fmt + 'GHz') % (f / 1e3)
+    else:
+        ff = (fmt + 'MHz') % f
+    return ff
+# end def format_f
+
 class Gain_Data:
 
     def __init__ (self, parent, f):
@@ -253,17 +268,7 @@ class Gain_Data:
         self.theta_max = self.thetas_d [self.theta_maxidx]
         self.phi_max   = self.phis_d   [self.phi_maxidx]
         self.desc      = ['Title: %s' % self.parent.title]
-        if self.f < 1e-3:
-            desc = 'Frequency: %.2f Hz' % (self.f * 1e6)
-        elif self.f < 1:
-            desc = 'Frequency: %.2f kHz' % (self.f * 1e3)
-        elif self.f > 1e6:
-            desc = 'Frequency: %.2f THz' % (self.f / 1e6)
-        elif self.f > 1e3:
-            desc = 'Frequency: %.2f GHz' % (self.f / 1e3)
-        else:
-            desc = 'Frequency: %.2f MHz' % self.f
-        self.desc.append (desc)
+        self.desc.append ('Frequency: ' + format_f (self.f, 2))
         self.lbl_deg   = 0
         self.labels    = None
     # end def compute
@@ -354,7 +359,6 @@ class Loaded_Segment:
     """ A segment either loaded with an impedance or an excitation
     """
 
-    by_name = {}
     nec_types = \
 	[ 'Series RLC, absolute'
         , 'Parallel RLC, absolute'
@@ -364,9 +368,10 @@ class Loaded_Segment:
         , 'Wire conductivity'
 	]
 
-    def __init__ (self, coord, name):
-        self.coord = coord
-        self.name  = name
+    def __init__ (self, by_name, coord, name):
+        self.coord   = coord
+        self.name    = name
+        self.by_name = by_name
         if name not in self.by_name:
             self.by_name [name] = []
         self.by_name [name].append (self)
@@ -388,7 +393,8 @@ class Gain_Plot:
     c_real = '#AE4141'
     c_imag = '#FFB329'
 
-    def __init__ (self, args):
+    def __init__ \
+        (self, args, gdata, geo = None, has_ground = False, loaded_segs = None):
         self.args        = args
         self.dpi         = args.dpi
         self.filename    = args.filename
@@ -412,59 +418,22 @@ class Gain_Plot:
             self.with_slider = False
         # Default title from filename
         self.title = os.path.splitext (os.path.basename (args.filename)) [0]
-        # This might override title
-        self.gdata = {}
-        self.geo = []
-        self.seg_by_tag = {}
-        self.segments = []
-        self.has_ground = False
-        # This populates gdata:
-        self.read_file ()
-        # If there is a title option it wins:
-        if self.args.title:
-            self.title = self.args.title
-        self.frequencies = []
-        self.maxg = None
-        theta_idx = {}
-        phi_idx   = {}
-        for f in sorted (self.gdata):
-            gdata = self.gdata [f]
-            gdata.compute ()
-            if gdata.theta_maxidx not in theta_idx:
-                theta_idx [gdata.theta_maxidx] = 0
-            theta_idx [gdata.theta_maxidx] += 1
-            if gdata.phi_maxidx not in phi_idx:
-                phi_idx [gdata.phi_maxidx] = 0
-            phi_idx [gdata.phi_maxidx] += 1
-            if self.maxg is None or self.maxg < gdata.maxg:
-                self.maxg = gdata.maxg
-            self.frequencies.append (f)
-        # Compute the theta index that occurs most often over all
-        # frequencies
-        self.theta_maxidx = list \
-            (sorted (theta_idx, key = lambda a: theta_idx [a])) [-1]
-        self.phi_maxidx = list \
-            (sorted (phi_idx, key = lambda a: phi_idx [a])) [-1]
-        if self.args.angle_azimuth is not None:
-            phis = next (iter (self.gdata.values ())).phis_d
-            self.phi_angle_idx = nearest_angle_idx \
-                (phis, self.args.angle_azimuth)
-        else:
-            self.phi_angle_idx = self.phi_maxidx
-        if self.args.angle_elevation is not None:
-            thetas = next (iter (self.gdata.values ())).thetas_d
-            self.theta_angle_idx = nearest_angle_idx \
-                (thetas, 90 - self.args.angle_elevation)
-        else:
-            self.theta_angle_idx = self.theta_maxidx
-        if self.outfile or len (self.gdata) == 1 or not self.with_slider:
-            self.with_slider = False
-        # Borrow colormap from matplotlib to use in plotly
-        self.colormap = []
-        for cn in mcolors.TABLEAU_COLORS:
-            self.colormap.append (mcolors.TABLEAU_COLORS [cn])
-        self.c_vswr = self.colormap [0]
+        self.gdata = gdata
+        self.geo   = geo or []
+        self.seg_by_tag  = {}
+        self.segments    = []
+        self.has_ground  = has_ground
+        self.loaded_segs = loaded_segs or {}
     # end def __init__
+
+    @classmethod
+    def from_file (cls, args, filename = None):
+        filename = filename or args.filename
+        # This populates gdata and might override title:
+        gp = cls (args, gdata = {})
+        gp.read_file (filename)
+        return gp
+    # end def from_file
 
     @property
     def plotly_polar_default (self):
@@ -630,13 +599,60 @@ class Gain_Plot:
         return xyz.T
     # end def all_gains
 
-    def read_file (self):
+    def compute (self):
+        # If there is a title option it wins:
+        if self.args.title:
+            self.title = self.args.title
+        self.frequencies = []
+        self.maxg = None
+        theta_idx = {}
+        phi_idx   = {}
+        for f in sorted (self.gdata):
+            gdata = self.gdata [f]
+            gdata.compute ()
+            if gdata.theta_maxidx not in theta_idx:
+                theta_idx [gdata.theta_maxidx] = 0
+            theta_idx [gdata.theta_maxidx] += 1
+            if gdata.phi_maxidx not in phi_idx:
+                phi_idx [gdata.phi_maxidx] = 0
+            phi_idx [gdata.phi_maxidx] += 1
+            if self.maxg is None or self.maxg < gdata.maxg:
+                self.maxg = gdata.maxg
+            self.frequencies.append (f)
+        # Compute the theta index that occurs most often over all
+        # frequencies
+        self.theta_maxidx = list \
+            (sorted (theta_idx, key = lambda a: theta_idx [a])) [-1]
+        self.phi_maxidx = list \
+            (sorted (phi_idx, key = lambda a: phi_idx [a])) [-1]
+        if self.args.angle_azimuth is not None:
+            phis = next (iter (self.gdata.values ())).phis_d
+            self.phi_angle_idx = nearest_angle_idx \
+                (phis, self.args.angle_azimuth)
+        else:
+            self.phi_angle_idx = self.phi_maxidx
+        if self.args.angle_elevation is not None:
+            thetas = next (iter (self.gdata.values ())).thetas_d
+            self.theta_angle_idx = nearest_angle_idx \
+                (thetas, 90 - self.args.angle_elevation)
+        else:
+            self.theta_angle_idx = self.theta_maxidx
+        if self.outfile or len (self.gdata) == 1 or not self.with_slider:
+            self.with_slider = False
+        # Borrow colormap from matplotlib to use in plotly
+        self.colormap = []
+        for cn in mcolors.TABLEAU_COLORS:
+            self.colormap.append (mcolors.TABLEAU_COLORS [cn])
+        self.c_vswr = self.colormap [0]
+    # end def compute
+
+    def read_file (self, filename):
         guard     = 'not set'
         delimiter = guard
         gdata     = None
         status    = 'start'
         wires     = []
-        with open (self.filename, 'r') as f:
+        with open (filename, 'r') as f:
             for line in f:
                 line = line.strip ()
                 if  (   line.startswith ('X             Y             Z')
@@ -677,7 +693,7 @@ class Gain_Plot:
                                 seg = self.segments [n - 1]
                             else:
                                 seg = self.seg_by_tag [tag][n - 1]
-                            Loaded_Segment (seg, name)
+                            Loaded_Segment (self.loaded_segs, seg, name)
                     if ll [4] == 'LD':
                         typ, tag, m, n = (int (x) for x in ll [5:9])
                         name = Loaded_Segment.nec_types [typ]
@@ -687,12 +703,13 @@ class Gain_Plot:
                             segs = self.seg_by_tag [tag]
                         if m == 0:
                             for s in segs:
-                                Loaded_Segment (s, name)
+                                Loaded_Segment (self.loaded_segs, s, name)
                         else:
                             if n == 0:
                                 n = m
                             for i in range (n, m + 1):
-                                Loaded_Segment (segs [i], name)
+                                Loaded_Segment \
+                                    (self.loaded_segs, segs [i], name)
                     if ll [4] == 'GN':
                         self.has_ground = True
                 if status != 'start' and not line:
@@ -712,13 +729,16 @@ class Gain_Plot:
                         name = txt.split (',', 1) [-1]
                         if name == 'RESISTANCE,REACTANCE':
                             name = 'Impedance'
-                        Loaded_Segment (self.seg_by_tag [tag], name)
+                        Loaded_Segment \
+                            (self.loaded_segs, self.seg_by_tag [tag], name)
                 if status == 'source':
                     if line.startswith ('PULSE'):
                         l = line.split (':')[1]
                         tag, v, p = l.split (',')
                         tag = int (tag)
-                        Loaded_Segment (self.seg_by_tag [tag], 'Excitation')
+                        name = 'Excitation'
+                        Loaded_Segment \
+                            (self.loaded_segs, self.seg_by_tag [tag], name)
                 if status == 'wire':
                     l = line.split ()
                     wires [-1].append ([float (a) for a in l [:3]])
@@ -774,7 +794,9 @@ class Gain_Plot:
                               "using last occurrence"
                             , file = sys.stderr
                             )
-                    gdata = self.gdata [f] = Gain_Data (self, f)
+                        gdata = self.gdata [f]
+                    else:
+                        gdata = self.gdata [f] = Gain_Data (self, f)
                     delimiter = guard
                     continue
                 if line.startswith ('IMPEDANCE ='):
@@ -1081,7 +1103,7 @@ class Gain_Plot:
         df = dict \
             ( r       = self.polargains
             , theta   = (self.angles / np.pi * 180) % 360
-            , name    = "f=%.3f MHz" % self.frequency
+            , name    = "f=" + format_f (self.frequency)
             , mode    = 'lines'
             , visible = True if self.plotly_firstfig else 'legendonly'
             , text    = ['%.2f dBi (%.2f dB)' % (u, u - self.maxg)
@@ -1245,7 +1267,7 @@ class Gain_Plot:
                 , colorscale   = 'rainbow'
                 , visible      = visible
                 , legendgroup  = lgroup
-                , name         = "f=%.3f MHz" % self.frequency
+                , name         = "f=" + format_f (self.frequency)
                 , colorbar = dict
                     ( tickvals = tickvals
                     , ticktext = ticktext
@@ -1264,7 +1286,7 @@ class Gain_Plot:
                     , legendgroup = lgroup
                     , visible     = visible
                     , showlegend  = True
-                    , name        = "f=%.3f MHz" % self.frequency
+                    , name        = "f=" + format_f (self.frequency)
                     )
                 , row = 1, col = 2
                 )
@@ -1530,8 +1552,8 @@ class Gain_Plot:
         d.update (marker = dict (color = self.colormap [0]))
         d ['x'], d ['y'], d ['z'] = geo.T
         fig.add_trace (go.Scatter3d (**d))
-        for i, name in enumerate (sorted (Loaded_Segment.by_name)):
-            segs = Loaded_Segment.by_name [name]
+        for i, name in enumerate (sorted (self.loaded_segs)):
+            segs = self.loaded_segs [name]
             coord = []
             for s in segs:
                 coord.append (s.coord)
@@ -1571,8 +1593,8 @@ class Gain_Plot:
             g = np.array (g)
             x, y, z = g.T
             ax.plot (x, y, z, color = self.colormap [0])
-        for i, name in enumerate (sorted (Loaded_Segment.by_name)):
-            segs = Loaded_Segment.by_name [name]
+        for i, name in enumerate (sorted (self.loaded_segs)):
+            segs = self.loaded_segs [name]
             coord = []
             for s in segs:
                 coord.append (s.coord)
@@ -2000,7 +2022,8 @@ def main (argv = sys.argv [1:], pic_io = None):
     if pic_io is not None:
         args.output_file = pic_io
         args.save_format = 'png'
-    gp = Gain_Plot (args)
+    gp = Gain_Plot.from_file (args)
+    gp.compute ()
 
     # Default is all
     if  (   not args.azimuth and not args.elevation

@@ -19,6 +19,7 @@ clean:
 	rm -f README.html plot_antenna/Version.py announce_pypi
 	rm -rf dist build upload upload_homepage ReleaseNotes.txt $(CLEAN)
 	rm -rf plot_antenna.egg-info
+	rm *.ppm
 
 .PHONY: clean test
 

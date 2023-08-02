@@ -160,17 +160,17 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'gainfile', dict
-            (( ('3.0.2', 'a07f6166e68ee408a4131c866ebbe3f4bc94aa59')
+            (( ('3.0.2', '137e9550138ae29517a656785916e9e53659c535')
             ,  ('3.3.4', 'e7a5888d1499494818eaf110f30cc7c06e7e3543')
-            ,  ('3.5.2', '1ef7b62708590b2bcd6ed5afc23da63f111f9f84')
-            ,  ('3.6.3', 'e7a5888d1499494818eaf110f30cc7c06e7e3543')
+            ,  ('3.5.2', '7eb9eda74a98a3086be5077fbe8999b3601f7582')
+            ,  ('3.6.3', 'f9234e4868fbd0104cdb10c8cad7e5a490f33dcc')
             ))
           )
        ,  ( 'gainfile_plotly', dict
-            (( ('5.4.0',  '3f84d929ef5a3f5b7b7122543502099e31b07d7a')
-            ,  ('5.10.0', '3f84d929ef5a3f5b7b7122543502099e31b07d7a')
-            ,  ('5.15.0', [ '3f84d929ef5a3f5b7b7122543502099e31b07d7a'
-                          , 'ce14166b62f11eba795294a38bbfe0d262a91151'
+            (( ('5.4.0',  '1b208de1caf499c08414ae7787fa93002159b898')
+            ,  ('5.10.0', '1b208de1caf499c08414ae7787fa93002159b898')
+            ,  ('5.15.0', [ '7e4f7e2fa1fb5f9603c3e7f3730ca4d20b94c7cb'
+                          , '1b208de1caf499c08414ae7787fa93002159b898'
                           ]
                )
             ))
@@ -323,7 +323,7 @@ class Test_Plot (unittest.TestCase):
         io  = BytesIO ()
         img.save (io, format = 'ppm')
         if self.debug:
-            with open ('zoppel', 'wb') as f:
+            with open (calling_fun + '.ppm', 'wb') as f:
                 f.write (io.getvalue ())
         cs = hashlib.sha1 (io.getvalue ()).hexdigest ()
         assert cs in get_picture_hash (calling_fun)
@@ -487,7 +487,7 @@ class Test_Plot (unittest.TestCase):
         """ Original basic implementation can save gains to a file
         """
         infile = "test/DP001.GNN"
-        args = ["--ele", "--angle-azi=60", infile]
+        args = ["--ele", "--angle-azi=60", "--default-f=14MHz", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_gainfile
@@ -496,7 +496,7 @@ class Test_Plot (unittest.TestCase):
         """ Original basic implementation can save gains to a file
         """
         infile = "test/DP001.GNN"
-        args = ["--ele", "-S", "--angle-azi=60", infile]
+        args = ["--ele", "-S", "--angle-azi=60", "--default-f=14MHz", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_gainfile_plotly
