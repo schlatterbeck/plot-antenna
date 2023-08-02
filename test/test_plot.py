@@ -161,7 +161,7 @@ picture_hashes = dict \
           )
        ,  ( 'gainfile', dict
             (( ('3.0.2', '137e9550138ae29517a656785916e9e53659c535')
-            ,  ('3.3.4', 'e7a5888d1499494818eaf110f30cc7c06e7e3543')
+            ,  ('3.3.4', 'f9234e4868fbd0104cdb10c8cad7e5a490f33dcc')
             ,  ('3.5.2', '7eb9eda74a98a3086be5077fbe8999b3601f7582')
             ,  ('3.6.3', 'f9234e4868fbd0104cdb10c8cad7e5a490f33dcc')
             ))
