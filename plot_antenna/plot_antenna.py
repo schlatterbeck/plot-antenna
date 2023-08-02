@@ -7,7 +7,10 @@ import matplotlib.colors as mcolors
 import numpy as np
 from html import escape
 from bisect import bisect
-from itertools import pairwise
+try:
+    from itertools import pairwise
+except ImportError:
+    pairwise = None
 from mpl_toolkits.mplot3d import Axes3D
 from argparse import ArgumentParser, HelpFormatter
 from matplotlib import cm, __version__ as matplotlib_version, rcParams, ticker
@@ -250,16 +253,18 @@ class Gain_Data:
         for theta, phi in sorted (self.pattern):
             thetas.add (theta)
             phis.add   (phi)
-        tdiff = None
-        for a, b in pairwise (sorted (thetas)):
-            if tdiff is None or abs (a - b) > tdiff:
-                tdiff = abs (a - b)
-        self.max_theta_diff = tdiff
-        pdiff = None
-        for a, b in pairwise (sorted (phis)):
-            if pdiff is None or abs (a - b) > pdiff:
-                pdiff = abs (a - b)
-        self.max_phi_diff = pdiff
+        self.max_phi_diff = self.max_theta_diff = 1e-9
+        if pairwise is not None:
+            tdiff = None
+            for a, b in pairwise (sorted (thetas)):
+                if tdiff is None or abs (a - b) > tdiff:
+                    tdiff = abs (a - b)
+            self.max_theta_diff = tdiff
+            pdiff = None
+            for a, b in pairwise (sorted (phis)):
+                if pdiff is None or abs (a - b) > pdiff:
+                    pdiff = abs (a - b)
+            self.max_phi_diff = pdiff
 
         td = list (sorted (thetas))
         pd = list (sorted (phis))
@@ -315,7 +320,6 @@ class Gain_Data:
         pmx = self.phis.shape [0] - self.phis.shape [0] % 2
         idx = (self.parent.phi_angle_idx + pmx // 2) % pmx
         assert idx != self.parent.phi_angle_idx
-        eps = 1e-9
         phis = self.phis
         diff = abs (phis [idx] - phis [self.parent.phi_angle_idx])
         # This should really be a very low value but if these are
