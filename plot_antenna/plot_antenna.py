@@ -236,7 +236,7 @@ def format_f (f, precision = 3):
 
 class Gain_Data:
 
-    def __init__ (self, parent, f):
+    def __init__ (self, f, parent = None):
         self.parent   = parent
         self.f        = f
         self.pattern  = {}
@@ -419,6 +419,10 @@ class Gain_Plot:
         # Default title from filename
         self.title = os.path.splitext (os.path.basename (args.filename)) [0]
         self.gdata = gdata
+        for f in self.gdata:
+            gd = self.gdata [f]
+            assert gd.parent is None
+            gd.parent = self
         self.geo   = geo or []
         self.seg_by_tag  = {}
         self.segments    = []
@@ -796,7 +800,7 @@ class Gain_Plot:
                             )
                         gdata = self.gdata [f]
                     else:
-                        gdata = self.gdata [f] = Gain_Data (self, f)
+                        gdata = self.gdata [f] = Gain_Data (f, self)
                     delimiter = guard
                     continue
                 if line.startswith ('IMPEDANCE ='):
@@ -827,7 +831,7 @@ class Gain_Plot:
                     if line.endswith (',D'):
                         delimiter = ','
                         f = self.args.default_frequency
-                        gdata = self.gdata [f] = Gain_Data (self, f)
+                        gdata = self.gdata [f] = Gain_Data (f, self)
                         continue
                     if line.startswith ('ANGLE') and line.endswith ('(DB)'):
                         delimiter = None
