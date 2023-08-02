@@ -253,7 +253,17 @@ class Gain_Data:
         self.theta_max = self.thetas_d [self.theta_maxidx]
         self.phi_max   = self.phis_d   [self.phi_maxidx]
         self.desc      = ['Title: %s' % self.parent.title]
-        self.desc.append ('Frequency: %.2f MHz' % self.f)
+        if self.f < 1e-3:
+            desc = 'Frequency: %.2f Hz' % (self.f * 1e6)
+        elif self.f < 1:
+            desc = 'Frequency: %.2f kHz' % (self.f * 1e3)
+        elif self.f > 1e6:
+            desc = 'Frequency: %.2f THz' % (self.f / 1e6)
+        elif self.f > 1e3:
+            desc = 'Frequency: %.2f GHz' % (self.f / 1e3)
+        else:
+            desc = 'Frequency: %.2f MHz' % self.f
+        self.desc.append (desc)
         self.lbl_deg   = 0
         self.labels    = None
     # end def compute
@@ -1788,8 +1798,8 @@ def main (argv = sys.argv [1:], pic_io = None):
         ( '--default-frequency'
         , help    = 'Default frequency for input formats that do not '
                     'specify a frequency (e.g. the old MININEC gain '
-                    '(.GNN) format)'
-        , type    = float
+                    '(.GNN) format), if no unit (e.g. GHz) is given '
+                    'it defaults to MHz'
         , default = 0.0
         )
     cmd.add_argument \
@@ -1967,6 +1977,21 @@ def main (argv = sys.argv [1:], pic_io = None):
         else:
             hb [n] = (l, h)
     args.band = hb
+    if args.default_frequency:
+        df = args.default_frequency.strip ()
+        if df.endswith ('Hz'):
+            if df [-3] == 'T':
+                args.default_frequency = float (df [:-3]) * 1e6
+            elif df [-3] == 'G':
+                args.default_frequency = float (df [:-3]) * 1e3
+            elif df [-3] == 'M':
+                args.default_frequency = float (df [:-3])
+            elif df [-3] == 'k':
+                args.default_frequency = float (df [:-3]) / 1e3
+            else:
+                args.default_frequency = float (df [:-2]) / 1e6
+        else:
+            args.default_frequency = float (df)
     if args.decibel_style not in deci_styles:
         cmd.print_usage ()
         exit ('Invalid decibel-style: "%s"' % args.decibel_style)
