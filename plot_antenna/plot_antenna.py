@@ -1067,7 +1067,10 @@ class Gain_Plot:
         self.lbl_deg = self.data.phis_d [self.phi_angle_idx]
         self.labels  = 'XY'
         self.polargains, self.unscaled = self.data.azimuth_gains (self.scaler)
-        self.angles = self.data.phis
+        indexes = np.logical_not (np.isnan (self.polargains))
+        self.polargains = self.polargains [indexes]
+        self.unscaled   = self.unscaled   [indexes]
+        self.angles     = self.data.phis  [indexes]
         self.polarplot (name)
     # end def azimuth
 
@@ -1086,9 +1089,12 @@ class Gain_Plot:
         self.lbl_deg  = 90 - self.data.thetas_d [self.theta_angle_idx]
         self.labels   = None
         self.polargains, self.unscaled = self.data.elevation_gains (self.scaler)
+        indexes = np.logical_not (np.isnan (self.polargains))
+        self.polargains = self.polargains [indexes]
+        self.unscaled   = self.unscaled   [indexes]
         thetas = self.data.thetas
         p2 = np.pi / 2
-        self.angles = np.append (p2 - thetas, np.flip (p2 + thetas))
+        self.angles = np.append (p2 - thetas, np.flip (p2 + thetas)) [indexes]
         self.polarplot (name)
     # end def elevation
 
