@@ -177,7 +177,7 @@ picture_hashes = dict \
           )
        ,  ( 'geo', dict
             (( ('3.0.2', '22baea55587016bb29bdcd3b56a1dc8a87100f3d')
-            ,  ('3.3.4', '7c085ddc21d488930b4287f01db31b431800dc9f')
+            ,  ('3.3.4', '5a21d4501625eeccd70bdda13e9d197a6c00a82b')
             ,  ('3.5.2', '2e2c52a558339b4aa4bf2f67394a09edbc0abc50')
             ,  ('3.6.3', '7c085ddc21d488930b4287f01db31b431800dc9f')
             ))
