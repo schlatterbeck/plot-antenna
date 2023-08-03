@@ -1585,6 +1585,7 @@ class Gain_Plot:
         geo = np.array (geo)
         d = dict (mode = 'lines', connectgaps = False, name = 'Geometry')
         d.update (marker = dict (color = self.colormap [0]))
+        d.update (line = dict (width = 5))
         d ['x'], d ['y'], d ['z'] = geo.T
         fig.add_trace (go.Scatter3d (**d))
         for i, name in enumerate (sorted (self.loaded_segs)):
@@ -1627,7 +1628,8 @@ class Gain_Plot:
         for g in self.geo:
             g = np.array (g)
             x, y, z = g.T
-            ax.plot (x, y, z, color = self.colormap [0])
+            d = dict (color = self.colormap [0], linewidth = 3)
+            ax.plot (x, y, z, **d)
         for i, name in enumerate (sorted (self.loaded_segs)):
             segs = self.loaded_segs [name]
             coord = []
@@ -1635,7 +1637,8 @@ class Gain_Plot:
                 coord.append (s.coord)
             coord = np.array (coord, dtype = float)
             x, y, z = coord.T
-            ax.scatter (x, y, z, color = self.colormap [i + 1], marker = 'o')
+            d = dict (color = self.colormap [i + 1], marker = 'o')
+            ax.scatter (x, y, z, **d)
         if self.has_ground:
             x, y = np.meshgrid (xr, yr)
             z = np.zeros (x.shape)
