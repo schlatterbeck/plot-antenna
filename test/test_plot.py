@@ -250,7 +250,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'vswr_extended', dict
-            (( ('3.0.2', 'fail')
+            (( ('3.0.2', '3ea33e12ae46ca889c0b68f80046e7dbba89d0fa')
             ,  ('3.3.4', 'abccaab32ed29b4bc91a991a3affd2a59ee312e4')
             ,  ('3.5.2', '8f2dffe04393666fb71bc29837f9d2e7c554b9b9')
             ,  ('3.6.3', 'abccaab32ed29b4bc91a991a3affd2a59ee312e4')
