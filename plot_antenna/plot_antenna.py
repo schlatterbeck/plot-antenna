@@ -1413,7 +1413,7 @@ class Gain_Plot:
             ax3 = ax.twinx ()
             ax2.tick_params (axis = 'y', colors = self.c_real)
             ax3.tick_params (axis = 'y', colors = self.c_imag)
-            ax3.spines.right.set_position (("axes", 1.2))
+            ax3.spines ['right'].set_position (("axes", 1.2))
             if self.args.swr_plot_impedance_angle:
                 ax2.set_ylabel ("|Z|", color = self.c_real)
                 ax2.plot (X, xabs, color = self.c_real, linewidth = 0.9)
