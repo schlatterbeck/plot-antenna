@@ -349,6 +349,45 @@ class Gain_Data:
         return desc
     # end def elevation_text
 
+    def interpolate_azimuth (self, step_deg, start_deg = 0, end_deg = 360):
+        thetas   = set ()
+        by_theta = {}
+        for theta, phi in sorted (self.pattern):
+            thetas.add (theta)
+            if theta not in by_theta:
+                by_theta [theta] = []
+            by_theta [theta].append (phi)
+
+        pattern_new = {}
+        for theta in thetas:
+            phis = by_theta [theta]
+            for azi in np.arange (start_deg, end_deg, step_deg, dtype = float):
+                idx = bisect (phis, azi)
+                if idx == 0 or idx == len (phis):
+                    if start_deg > 0 or end_deg < 360:
+                        continue
+                    if idx == 0:
+                        p_l = phis [-1]
+                        p_r = phis [idx]
+                    else:
+                        p_l = phis [idx - 1]
+                        p_r = phis [0]
+                else:
+                    p_l = phis [idx - 1]
+                    p_r = phis [idx]
+                l = self.pattern [(theta, p_l)]
+                r = self.pattern [(theta, p_r)]
+                if p_r < p_l:
+                    p_l -= 360
+                if p_r == p_l:
+                    v = l
+                else:
+                    v = ((azi - p_l) / (p_r - p_l) * (r - l) + l)
+                    assert l <= v <= r or l >= v >= r
+                pattern_new [(theta, azi)] = v
+        self.pattern = pattern_new
+    # end def interpolate_azimuth
+
     def plot3d_gains (self, scaler):
         gains  = scaler.scale (self.parent.maxg, self.gains)
         P, T   = np.meshgrid (self.phis, self.thetas)
@@ -644,6 +683,8 @@ class Gain_Plot:
         phi_idx   = {}
         for f in sorted (self.gdata):
             gdata = self.gdata [f]
+            if self.args.interpolate_azimuth_step:
+                gdata.interpolate_azimuth (self.args.interpolate_azimuth_step)
             gdata.compute ()
             if gdata.theta_maxidx not in theta_idx:
                 theta_idx [gdata.theta_maxidx] = 0
@@ -898,7 +939,7 @@ class Gain_Plot:
         self.frequency = f
         self.cur_freq  = f
         self.impedance = getattr (self.args, 'system_impedance', None)
-        if self.args.as_stl:
+        if getattr (self.args, 'as_stl', None):
             self.plot3d_stl (f)
         elif  (  getattr (self.args, 'export_html', None)
             or getattr (self.args, 'show_in_browser', None)
@@ -1964,6 +2005,12 @@ def options_gain (cmd = None):
                         ' with +/- keys and slider is very slow.'
             , action  = 'store_true'
             )
+    cmd.add_argument \
+        ( '--interpolate-azimuth-step'
+        , help    = 'Interpolate azimuth angles from 0 to 360 with this'
+                    ' stepsize, default is to not interpolate'
+        , type    = float
+        )
     cmd.add_argument \
         ( '--margin-3d'
         , help    = 'Margin around 3D plot in pixel for plotly backend'
