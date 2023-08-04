@@ -24,6 +24,12 @@ try:
     import pandas         as pd
 except ImportError:
     px = None
+try:
+    import stl
+    from scipy.spatial import Delaunay
+except ImportError:
+    stl = None
+    pass
 
 matplotlib_version_float = float ('.'.join (matplotlib_version.split ('.')[:2]))
 
@@ -385,13 +391,13 @@ class Loaded_Segment:
     """
 
     nec_types = \
-	[ 'Series RLC, absolute'
+        [ 'Series RLC, absolute'
         , 'Parallel RLC, absolute'
         , 'Series RLC, per m'
         , 'Parallel RLC, per m'
         , 'Impedance'
         , 'Wire conductivity'
-	]
+        ]
 
     def __init__ (self, by_name, coord, name):
         self.coord   = coord
@@ -518,8 +524,8 @@ class Gain_Plot:
                     , showgrid    = True
                     , gridcolor   = blend (self.c_vswr)
                     , title       = {}
-		    , anchor      = "x"
-		    , side        = "left"
+                    , anchor      = "x"
+                    , side        = "left"
                     , hoverformat = '.2f'
                     , zeroline    = False
                     )
@@ -530,8 +536,8 @@ class Gain_Plot:
                     , gridcolor   = blend (self.c_real)
                     , title       = {}
                     , overlaying  = "y"
-		    , side        = "right"
-		    , anchor      = "x2"
+                    , side        = "right"
+                    , anchor      = "x2"
                     , hoverformat = '.1f'
                     , zeroline    = False
                     )
@@ -542,9 +548,9 @@ class Gain_Plot:
                     , gridcolor   = blend (self.c_imag)
                     , title       = {}
                     , overlaying  = "y"
-		    , side        = "right"
-		    , position    = 0.96
-		    , anchor      = "free"
+                    , side        = "right"
+                    , position    = 0.96
+                    , anchor      = "free"
                     , hoverformat = '.1f'
                     , zeroline    = False
                     )
@@ -892,7 +898,9 @@ class Gain_Plot:
         self.frequency = f
         self.cur_freq  = f
         self.impedance = getattr (self.args, 'system_impedance', None)
-        if  (  getattr (self.args, 'export_html', None)
+        if self.args.as_stl:
+            self.plot3d_stl (f)
+        elif  (  getattr (self.args, 'export_html', None)
             or getattr (self.args, 'show_in_browser', None)
             ):
             self.plot_plotly (f)
@@ -1345,6 +1353,36 @@ class Gain_Plot:
                 )
             self.show_plotly (fig, name, script = self.plotly_3d_script)
     # end def plot3d_plotly
+
+    def plot3d_stl (self, f):
+        self.data = self.gdata [f]
+        t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
+        tri_e = []
+        tri_a = []
+        ele, azi = X.shape
+        for e1, e2 in pairwise (range (ele)):
+            for a1, a2 in pairwise (range (azi)):
+                tri_e.append (np.array ([(e1, e1, e2)]))
+                tri_a.append (np.array ([(a1, a2, a1)]))
+                tri_e.append (np.array ([(e2, e1, e2)]))
+                tri_a.append (np.array ([(a1, a2, a2)]))
+        tri_e = np.array (tri_e)
+        tri_a = np.array (tri_a)
+        l = len (tri_a)
+
+        data = np.zeros (l, dtype = stl.mesh.Mesh.dtype)
+        mesh = stl.mesh.Mesh (data, remove_empty_areas = False)
+        mesh.x [:] = np.reshape (X [tri_e, tri_a], (l, 3))
+        mesh.y [:] = np.reshape (Y [tri_e, tri_a], (l, 3))
+        mesh.z [:] = np.reshape (Z [tri_e, tri_a], (l, 3))
+
+        fn = self.args.as_stl
+        if '%' in self.args.as_stl:
+            fn = self.args.as_stl % f
+        if not fn.endswith ('.stl'):
+            fn = fn + '.stl'
+        mesh.save (fn)
+    # end def plot3d_stl
 
     def prepare_vswr (self):
         z0   = self.impedance
@@ -1976,6 +2014,16 @@ def options_geo (cmd = None):
     return cmd
 # end def options_geo
 
+def options_stl (cmd = None):
+    if cmd is None:
+        cmd = SortingArgumentParser ()
+    cmd.add_argument \
+        ( '--as-stl'
+        , help    = 'Output 3d geometry as STL'
+        )
+    return cmd
+# end def options_stl
+
 def options_swr (cmd = None):
     if cmd is None:
         cmd = SortingArgumentParser ()
@@ -2091,6 +2139,8 @@ def main (argv = sys.argv [1:], pic_io = None):
     cmd = options_general ()
     options_gain (cmd)
     options_geo  (cmd)
+    if stl is not None:
+        options_stl (cmd)
     options_swr  (cmd)
     cmd.add_argument \
         ( 'filename'
@@ -2104,12 +2154,22 @@ def main (argv = sys.argv [1:], pic_io = None):
     gp = Gain_Plot.from_file (args)
     gp.compute ()
 
+    all_plot_types = set \
+        (( 'azimuth', 'elevation', 'plot3d', 'plot_vswr', 'plot_geo'
+        ,  'plot_smith'
+        ))
+    set_types = sum (bool (getattr (args, p)) for p in all_plot_types)
     # Default is all
-    if  (   not args.azimuth and not args.elevation
-        and not args.plot3d  and not args.plot_vswr and not args.plot_geo
-        and not args.plot_smith
-        ):
-        args.plot3d = args.elevation = args.azimuth = args.plot_vswr = True
+    if  not set_types:
+        if args.as_stl:
+            args.plot3d = True
+        else:
+            args.plot3d = args.elevation = args.azimuth = args.plot_vswr = True
+    if args.as_stl:
+        all_but_3d = all_plot_types - set (('plot3d',))
+        all_but_3d = sum (bool (getattr (args, p)) for p in all_but_3d)
+        if all_but_3d:
+            print ('Warning: Output as-stl only supports 3D plot')
     gp.plot ()
 # end def main
 
