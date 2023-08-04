@@ -311,7 +311,8 @@ class Gain_Data:
     def azimuth_text (self, scaler):
         desc = self.desc.copy ()
         desc.insert (0, 'Azimuth Pattern')
-        desc.append ('Outer ring: %.2f dBi' % self.parent.maxg)
+        unit = self.parent.args.dB_unit
+        desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Elevation: %.2f°'
@@ -340,7 +341,8 @@ class Gain_Data:
     def elevation_text (self, scaler):
         desc = self.desc.copy ()
         desc.insert (0, 'Elevation Pattern')
-        desc.append ('Outer ring: %.2f dBi' % self.parent.maxg)
+        unit = self.parent.args.dB_unit
+        desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Azimuth: %.2f° (X=0°)'
@@ -1181,16 +1183,17 @@ class Gain_Plot:
             """
 
     def polarplot_plotly (self, name):
-        fig = self.plotly_fig
-        nm  = self.angle_name
-        tpl = 'Gain: %%{text}<br>%s: %%{theta}<extra></extra>' % nm
+        fig  = self.plotly_fig
+        nm   = self.angle_name
+        tpl  = 'Gain: %%{text}<br>%s: %%{theta}<extra></extra>' % nm
+        unit = self.args.dB_unit
         df = dict \
             ( r       = self.polargains
             , theta   = (self.angles / np.pi * 180) % 360
             , name    = "f=" + format_f (self.frequency)
             , mode    = 'lines'
             , visible = True if self.plotly_firstfig else 'legendonly'
-            , text    = ['%.2f dBi (%.2f dB)' % (u, u - self.maxg)
+            , text    = ['%.2f %s (%.2f dB)' % (u, unit, u - self.maxg)
                          for u in self.unscaled
                         ]
             , hovertemplate = tpl
@@ -1263,8 +1266,9 @@ class Gain_Plot:
         an = self.angle_name
         def format_polar_coord (x, y):
             sc = self.scaler.invscale (y)
-            return '%s=%.2f°, Gain=%.2f dBi (%.2f dB)' \
-                % (an, x / np.pi * 180, sc + self.maxg, sc)
+            un = self.args.dB_unit
+            return '%s=%.2f°, Gain=%.2f %s (%.2f dB)' \
+                % (an, x / np.pi * 180, sc + self.maxg, unit, sc)
         ax.format_coord = format_polar_coord
     # end def polarplot_matplotlib
 
@@ -1320,13 +1324,16 @@ class Gain_Plot:
     def plot3d_plotly (self, name):
         t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         xr, yr, zr = self.scene_ranges ()
-        fig = self.plotly_fig
+        fig  = self.plotly_fig
+        unit = self.args.dB_unit
         if self.args.decibel_style == 'both':
-            ticktext = ['%.2f dBi (%.2f dB)' % (u + self.maxg, u)
+            ticktext = ['%.2f %s (%.2f dB)' % (u + self.maxg, unit, u)
                         for u in self.scaler.ticks
                        ]
         elif self.args.decibel_style == 'absolute':
-            ticktext = ['%.2f dBi' % (u + self.maxg) for u in self.scaler.ticks]
+            ticktext = ['%.2f %s' % (u + self.maxg, unit)
+                        for u in self.scaler.ticks
+                       ]
         else:
             ticktext = ['%.2f dB' % u for u in self.scaler.ticks]
         # Ensure that the uppermost (0dB) mark is printed
@@ -1336,9 +1343,10 @@ class Gain_Plot:
         tickvals [0] = gains.max ()
         lgroup  = 'l%d' % self.plotly_count
         visible = True if self.plotly_firstfig else 'legendonly'
-        tpl = ('Gain: %{customdata[0]:.2f} dBi (%{customdata[1]:.2f} dB)<br>'
-               'Azimuth: %{customdata[2]:.2f}° (X: 0°)<br>'
-               'Elevation: %{customdata[3]:.2f}°<extra></extra>'
+        tpl = ('Gain: %%{customdata[0]:.2f} %s (%%{customdata[1]:.2f} dB)<br>'
+               'Azimuth: %%{customdata[2]:.2f}° (X: 0°)<br>'
+               'Elevation: %%{customdata[3]:.2f}°<extra></extra>'
+              % self.args.dB_unit
               )
 
         colorbar_xpos = 1.02
@@ -1947,6 +1955,14 @@ def options_general (cmd = None):
             , help    = "Show plotly logo in menu"
             , action  = 'store_true'
             )
+        cmd.add_argument \
+            ( "--dB-unit"
+            , help    = "Unit to print in diagrams, default=%(default)s,"
+                        " for antenna simulation the default is usually"
+                        " correct, for measurements of antennas the unit"
+                        " might, e.g. be dBm of the receiver"
+            , default = "dBi"
+            )
     return cmd
 # end def options_general
 
@@ -2208,11 +2224,11 @@ def main (argv = sys.argv [1:], pic_io = None):
     set_types = sum (bool (getattr (args, p)) for p in all_plot_types)
     # Default is all
     if  not set_types:
-        if args.as_stl:
+        if getattr (args, 'as_stl', None):
             args.plot3d = True
         else:
             args.plot3d = args.elevation = args.azimuth = args.plot_vswr = True
-    if args.as_stl:
+    if getattr (args, 'as_stl', None):
         all_but_3d = all_plot_types - set (('plot3d',))
         all_but_3d = sum (bool (getattr (args, p)) for p in all_but_3d)
         if all_but_3d:
