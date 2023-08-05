@@ -194,7 +194,7 @@ picture_hashes = dict \
           )
        ,  ( 'measurement', dict
             (( ('3.0.2', 'fb0c3ec927d0f8575f565631a73a7987200981c6')
-            ,  ('3.3.4', '')
+            ,  ('3.3.4', '2d55a68bd72cceaa75b7be16359057c770bf5bd8')
             ,  ('3.5.2', 'dc2452cddef6c8c59362ce3daea576c9a8b81667')
             ,  ('3.6.3', '2d55a68bd72cceaa75b7be16359057c770bf5bd8')
             ))
@@ -210,7 +210,7 @@ picture_hashes = dict \
           )
        ,  ( 'measurement_full', dict
             (( ('3.0.2', 'c06c9c3e1129531f8263b7f8553023ce0effa6ce')
-            ,  ('3.3.4', '')
+            ,  ('3.3.4', '8afa5c3e5c3dcdc7448d8162b70cba8c99b868c4')
             ,  ('3.5.2', '723ac9f815723bbcd1cfbc06ab1871f29026ca92')
             ,  ('3.6.3', '8afa5c3e5c3dcdc7448d8162b70cba8c99b868c4')
             ))
@@ -342,7 +342,7 @@ def check_status_matplotlib (v):
 # end def check_status_matplotlib
 
 class Test_Plot (unittest.TestCase):
-    debug = True
+    debug = False
 
     @pytest.fixture (autouse=True)
     def cleanup (self):
