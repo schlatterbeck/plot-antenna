@@ -379,8 +379,9 @@ class Gain_Data:
         pattern_new = {}
         for theta in thetas:
             phis = by_theta [theta]
-            for azi in np.arange (start_deg, end_deg, step_deg, dtype = float):
-                idx = bisect (phis, azi)
+            stop = end_deg + step_deg
+            for azi in np.arange (start_deg, stop, step_deg, dtype = float):
+                idx = bisect (phis, azi % 360)
                 if idx == 0 or idx == len (phis):
                     if start_deg > 0 or end_deg < 360:
                         continue
@@ -393,6 +394,8 @@ class Gain_Data:
                 else:
                     p_l = phis [idx - 1]
                     p_r = phis [idx]
+                assert p_l >= 0
+                assert p_r >= 0
                 l = self.pattern [(theta, p_l)]
                 r = self.pattern [(theta, p_r)]
                 if p_r < p_l:
@@ -400,7 +403,7 @@ class Gain_Data:
                 if p_r == p_l:
                     v = l
                 else:
-                    v = ((azi - p_l) / (p_r - p_l) * (r - l) + l)
+                    v = (((azi % 360) - p_l) / (p_r - p_l) * (r - l) + l)
                     assert l <= v <= r or l >= v >= r
                 pattern_new [(theta, azi)] = v
         self.pattern = pattern_new
@@ -714,6 +717,37 @@ class Gain_Plot:
         self.maxg = None
         theta_idx = {}
         phi_idx   = {}
+        pol_keys  = set ()
+        f_keys    = set ()
+        # First interpolate if necessary
+        for key in sorted (list (self.gdata)):
+            gdata = self.gdata [key]
+            if self.args.interpolate_azimuth_step:
+                gdata.interpolate_azimuth (self.args.interpolate_azimuth_step)
+            if len (key) > 1:
+                pol_keys.add (key [1])
+            f_keys.add (key [0])
+        # Now add polarization sum if H and V are in data but sum is not
+        dbmul = 10 / np.log (10)
+        if 'H' in pol_keys and 'V' in pol_keys and self.args.polarization:
+            if 'sum' in self.args.polarization and 'sum' not in pol_keys:
+                for f in f_keys:
+                    h = self.gdata [(f, 'H')]
+                    v = self.gdata [(f, 'V')]
+                    hp = h.pattern
+                    vp = v.pattern
+                    if len (hp) != len (vp):
+                        raise ValueError \
+                            ('Polarization sum: H/V angles do not match')
+                    gsum = Gain_Data ((f, 'sum'), self)
+                    self.gdata [(f, 'sum')] = gsum
+                    for kh, kv in zip (hp, vp):
+                        if kh != kv:
+                            raise ValueError \
+                                ('Polarization sum: H/V angles do not match')
+                        g = np.log (10 ** (hp [kh] / 10) + 10 ** (vp [kv] / 10))
+                        g *= dbmul
+                        gsum.pattern [kh] = g
         for key in sorted (list (self.gdata)):
             if len (key) > 1:
                 if self.args.polarization:
@@ -723,17 +757,16 @@ class Gain_Plot:
                 elif key [1] != 'sum':
                     del self.gdata [key]
                     continue
+            gdata = self.gdata [key]
             self.frq_keys.add (key [0])
             if len (key) > 1:
                 self.pol_keys.add (key [1])
-            gdata = self.gdata [key]
+            gdata.compute ()
             f = key [0]
             if f not in self.mpl_by_f:
                 self.mpl_by_f [f] = []
             self.mpl_by_f [f].append (gdata)
-            if self.args.interpolate_azimuth_step:
-                gdata.interpolate_azimuth (self.args.interpolate_azimuth_step)
-            gdata.compute ()
+            self.plot_keys.append (key)
             if gdata.theta_maxidx not in theta_idx:
                 theta_idx [gdata.theta_maxidx] = 0
             theta_idx [gdata.theta_maxidx] += 1
@@ -742,7 +775,6 @@ class Gain_Plot:
             phi_idx [gdata.phi_maxidx] += 1
             if self.maxg is None or self.maxg < gdata.maxg:
                 self.maxg = gdata.maxg
-            self.plot_keys.append (key)
         self.mpl_plot_keys = list (sorted (self.mpl_by_f))
         # Compute the theta index that occurs most often over all frequencies
         self.theta_maxidx = list \
