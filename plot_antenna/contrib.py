@@ -16,7 +16,7 @@ def parse_csv_measurement_data (args):
         - Polarisation: 'PH' for horizontal, 'PV' for vertical polarization
         - Messfrequenz: frequency
         - Einheit Messfrequenz: unit of frequency
-        For an example see test/MessdatenVisualisierung.csv
+        For an example see test/Messdaten.csv
         The format has the following peculiarities:
         - The elevation angles slightly vary for a single azimuth scan.
           This means we may have 10° and some values at 10.1°. Since the
@@ -58,16 +58,23 @@ def parse_csv_measurement_data (args):
     return gdata_dict
 # end def parse_csv_measurement_data
 
-def main_csv_measurement_data (argv = sys.argv [1:]):
+def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
     """ Parse a contributed measurement format, see docstring of
         parse_csv_measurement_data.
+        The pic_io argument is for testing.
     """
     cmd = aplot.options_general ()
     aplot.options_gain (cmd)
     cmd.add_argument ('filename', help = 'CSV File to parse and plot')
     args = aplot.process_args (cmd, argv)
+    if pic_io is not None:
+        args.output_file = pic_io
+        args.save_format = 'png'
     gdata = parse_csv_measurement_data (args)
     gp = aplot.Gain_Plot (args, gdata)
     gp.compute ()
     gp.plot ()
 # end def main_csv_measurement_data
+
+if __name__ == '__main__':
+    main_csv_measurement_data ()

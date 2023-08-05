@@ -30,6 +30,7 @@ import inspect
 from PIL import Image
 from bisect import bisect_left
 from plot_antenna.plot_antenna import main
+from plot_antenna.contrib import main_csv_measurement_data
 from io import BytesIO
 import matplotlib
 import plotly
@@ -191,6 +192,38 @@ picture_hashes = dict \
                )
             ))
           )
+       ,  ( 'measurement', dict
+            (( ('3.0.2', 'fb0c3ec927d0f8575f565631a73a7987200981c6')
+            ,  ('3.3.4', '')
+            ,  ('3.5.2', 'dc2452cddef6c8c59362ce3daea576c9a8b81667')
+            ,  ('3.6.3', '2d55a68bd72cceaa75b7be16359057c770bf5bd8')
+            ))
+          )
+       ,  ( 'measurement_plotly', dict
+            (( ('5.4.0',  'c98d0e03b7bf9090cf6ce9fbbe9dc132113974f8')
+            ,  ('5.10.0', 'c98d0e03b7bf9090cf6ce9fbbe9dc132113974f8')
+            ,  ('5.15.0', [ 'c98d0e03b7bf9090cf6ce9fbbe9dc132113974f8'
+                          , '3df9716996f3f65960c5182eede8f601834d6b66'
+                          ]
+               )
+            ))
+          )
+       ,  ( 'measurement_full', dict
+            (( ('3.0.2', 'c06c9c3e1129531f8263b7f8553023ce0effa6ce')
+            ,  ('3.3.4', '')
+            ,  ('3.5.2', '723ac9f815723bbcd1cfbc06ab1871f29026ca92')
+            ,  ('3.6.3', '8afa5c3e5c3dcdc7448d8162b70cba8c99b868c4')
+            ))
+          )
+       ,  ( 'measurement_full_plotly', dict
+            (( ('5.4.0',  'c869f79a74b778199ec5319a9ce34509d6d8b9b8')
+            ,  ('5.10.0', 'c869f79a74b778199ec5319a9ce34509d6d8b9b8')
+            ,  ('5.15.0', [ 'c869f79a74b778199ec5319a9ce34509d6d8b9b8'
+                          , '06bd7bf093d206f20888df7425725405fc557098'
+                          ]
+               )
+            ))
+          )
        ,  ( 'necfile', dict
             (( ('3.0.2', 'c6f672d460e81f5f14cf69d0d9d793b41ac8a7f3')
             ,  ('3.3.4', '36e0de54ff41c41f88530572fdcf712c77596cda')
@@ -309,7 +342,7 @@ def check_status_matplotlib (v):
 # end def check_status_matplotlib
 
 class Test_Plot (unittest.TestCase):
-    debug = False
+    debug = True
 
     @pytest.fixture (autouse=True)
     def cleanup (self):
@@ -559,5 +592,37 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_geo
+
+    def test_measurement (self):
+        infile = "test/Messdaten.csv"
+        args = ["--azi", "--polari=H", infile]
+        main_csv_measurement_data (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_measurement
+
+    def test_measurement_plotly (self):
+        infile = "test/Messdaten.csv"
+        args = ["--azi", "--polari=H", "-S", infile]
+        main_csv_measurement_data (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_measurement_plotly
+
+    def test_measurement_full (self):
+        infile = "test/Messdaten.csv"
+        args = [ "--ele", "--polari=H", "--polari=V", "--polari=sum"
+               , "--matp", "--angle-ele=10.3", "--interpol=2", infile
+               ]
+        main_csv_measurement_data (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_measurement_full
+
+    def test_measurement_full_plotly (self):
+        infile = "test/Messdaten.csv"
+        args = [ "--ele", "--polari=H", "--polari=V", "--polari=sum"
+               , "--matp", "--angle-ele=10.3", "--interpol=2", "-S", infile
+               ]
+        main_csv_measurement_data (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_measurement_full_plotly
 
 # end class Test_Plot
