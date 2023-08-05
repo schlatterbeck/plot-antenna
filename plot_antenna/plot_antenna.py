@@ -323,7 +323,7 @@ class Gain_Data:
         desc.insert (0, 'Azimuth Pattern')
         unit = self.parent.args.dB_unit
         # Can't be computed in self.desc because len of pol_keys not yet known
-        if len (self.parent.pol_keys) > 1:
+        if len (self.parent.pol_keys) > 1 and self.parent.mpl_plot_key is None:
             desc.append ('Polarization: ' + self.key [1])
         desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
@@ -356,7 +356,7 @@ class Gain_Data:
         desc.insert (0, 'Elevation Pattern')
         unit = self.parent.args.dB_unit
         # Can't be computed in self.desc because len of pol_keys not yet known
-        if len (self.parent.pol_keys) > 1:
+        if len (self.parent.pol_keys) > 1 and self.parent.mpl_plot_key is None:
             desc.append ('Polarization: ' + self.key [1])
         desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
@@ -488,7 +488,6 @@ class Gain_Plot:
         self.filename    = args.filename
         self.outfile     = args.output_file
         self.save_format = getattr (args, 'save_format', None)
-        self.with_slider = args.with_slider
         self.wireframe   = args.wireframe
         self.scalers     = dict \
             ( linear_db      = Linear_dB_Scaler (args.scaling_mindb)
@@ -499,10 +498,6 @@ class Gain_Plot:
         self.scaler = self.scalers [args.scaling_method]
         self.cur_scaler = self.scaler
 
-        # Discrete values for slider are available only in later
-        # matplotlib versions
-        if matplotlib_version_float < 3.5:
-            self.with_slider = False
         # Default title from filename
         self.title = os.path.splitext (os.path.basename (args.filename)) [0]
         self.gdata = gdata
@@ -510,13 +505,15 @@ class Gain_Plot:
             gd = self.gdata [key]
             assert gd.parent is None
             gd.parent = self
-        self.geo   = geo or []
-        self.seg_by_tag  = {}
-        self.segments    = []
-        self.has_ground  = has_ground
-        self.loaded_segs = loaded_segs or {}
-        self.frq_keys    = set ()
-        self.pol_keys    = set ()
+        self.geo          = geo or []
+        self.seg_by_tag   = {}
+        self.segments     = []
+        self.has_ground   = has_ground
+        self.loaded_segs  = loaded_segs or {}
+        self.frq_keys     = set ()
+        self.pol_keys     = set ()
+        self.mpl_by_f     = {}
+        self.mpl_plot_key = None
     # end def __init__
 
     @classmethod
@@ -730,6 +727,10 @@ class Gain_Plot:
             if len (key) > 1:
                 self.pol_keys.add (key [1])
             gdata = self.gdata [key]
+            f = key [0]
+            if f not in self.mpl_by_f:
+                self.mpl_by_f [f] = []
+            self.mpl_by_f [f].append (gdata)
             if self.args.interpolate_azimuth_step:
                 gdata.interpolate_azimuth (self.args.interpolate_azimuth_step)
             gdata.compute ()
@@ -742,6 +743,7 @@ class Gain_Plot:
             if self.maxg is None or self.maxg < gdata.maxg:
                 self.maxg = gdata.maxg
             self.plot_keys.append (key)
+        self.mpl_plot_keys = list (sorted (self.mpl_by_f))
         # Compute the theta index that occurs most often over all frequencies
         self.theta_maxidx = list \
             (sorted (theta_idx, key = lambda a: theta_idx [a])) [-1]
@@ -759,8 +761,6 @@ class Gain_Plot:
                 (thetas, 90 - self.args.angle_elevation)
         else:
             self.theta_angle_idx = self.theta_maxidx
-        if self.outfile or len (self.gdata) == 1 or not self.with_slider:
-            self.with_slider = False
         # Borrow colormap from matplotlib to use in plotly
         self.colormap = []
         for cn in mcolors.TABLEAU_COLORS:
@@ -997,6 +997,8 @@ class Gain_Plot:
             ):
             self.plot_plotly (key)
         else:
+            if self.args.mpl_pol_in_1:
+                self.mpl_plot_key = self.mpl_plot_keys [0]
             self.plot_matplotlib (key)
     # end def plot
 
@@ -1097,20 +1099,8 @@ class Gain_Plot:
         else:
             args       = [1, 1]
             figsize    = [x / dpi, y / dpi]
-        if self.with_slider:
-            fig_inc = .8
-            slider_perc = fig_inc / (fig_inc + figsize [1])
-            figsize [1] += fig_inc
         self.fig = fig = plt.figure (dpi = dpi, figsize = figsize)
         fig.canvas.manager.set_window_title (self.title)
-        if self.with_slider:
-            sc = 1 + slider_perc
-            hs = fig.subplotpars.hspace / sc
-            bt = fig.subplotpars.bottom / sc
-            sp = slider_perc            / sc
-            tp = 1 - ((1 - fig.subplotpars.top) / sc)
-            plt.subplots_adjust \
-                (hspace = hs, top = tp, bottom = sp + bt)
         self.axes = {}
         self.data = self.gdata [plotkey]
         self.gui_objects = {}
@@ -1126,25 +1116,8 @@ class Gain_Plot:
             if method is None:
                 method = getattr (self, name + '_matplotlib')
             method (name)
-        self.freq_slider = None
-        # Make a horizontal slider to control the plot_key
-        # (typically the frequency).
+        # Add keypress events only when interactive
         if not self.outfile:
-            if self.with_slider:
-                axfreq = fig.add_axes ([0.15, 0.01, 0.65, 0.03])
-                #axfreq = fig.add_axes ([0.15, 0.01, 0.65, sh])
-                minf   = min (self.gdata)
-                freq_slider = Slider \
-                    ( ax      = axfreq
-                    , label   = 'Frequency'
-                    , valinit = minf
-                    , valmin  = minf
-                    , valmax  = max (self.gdata)
-                    , valstep = np.array (list (self.gdata))
-                    , valfmt  = '%.2f MHz'
-                    )
-                self.freq_slider = freq_slider
-                freq_slider.on_changed (self.update_from_slider)
             # Add keypress events '+' and '-' and some more
             fig.canvas.mpl_connect ('key_press_event', self.keypress)
             # Remove default keybindings for some keys:
@@ -1167,9 +1140,20 @@ class Gain_Plot:
         self.desc = self.data.azimuth_text (self.scaler)
         self.lbl_deg = self.data.phis_d [self.phi_angle_idx]
         self.labels  = 'XY'
-        self.polargains, self.unscaled = self.data.azimuth_gains (self.scaler)
-        indexes = np.logical_not (np.isnan (self.polargains))
-        self.polargains = self.polargains [indexes]
+        if self.mpl_plot_key is not None:
+            self.polargains = []
+            lidx = None
+            for dat in self.mpl_by_f [self.mpl_plot_key]:
+                pg, self.unscaled = dat.azimuth_gains (self.scaler)
+                indexes = np.logical_not (np.isnan (pg))
+                assert lidx is None or (lidx == indexes).all ()
+                lidx = indexes
+                self.polargains.append (pg [indexes])
+        else:
+            self.polargains, self.unscaled = self.data.azimuth_gains \
+                (self.scaler)
+            indexes = np.logical_not (np.isnan (self.polargains))
+            self.polargains = self.polargains [indexes]
         self.unscaled   = self.unscaled   [indexes]
         self.angles     = self.data.phis  [indexes]
         self.polarplot (name)
@@ -1189,9 +1173,20 @@ class Gain_Plot:
         self.desc = self.data.elevation_text (self.scaler)
         self.lbl_deg  = 90 - self.data.thetas_d [self.theta_angle_idx]
         self.labels   = None
-        self.polargains, self.unscaled = self.data.elevation_gains (self.scaler)
-        indexes = np.logical_not (np.isnan (self.polargains))
-        self.polargains = self.polargains [indexes]
+        if self.mpl_plot_key is not None:
+            self.polargains = []
+            lidx = None
+            for dat in self.mpl_by_f [self.mpl_plot_key]:
+                pg, self.unscaled = dat.elevation_gains (self.scaler)
+                indexes = np.logical_not (np.isnan (pg))
+                assert lidx is None or (lidx == indexes).all ()
+                lidx = indexes
+                self.polargains.append (pg [indexes])
+        else:
+            self.polargains, self.unscaled = self.data.elevation_gains \
+                (self.scaler)
+            indexes = np.logical_not (np.isnan (self.polargains))
+            self.polargains = self.polargains [indexes]
         self.unscaled   = self.unscaled   [indexes]
         thetas = self.data.thetas
         p2 = np.pi / 2
@@ -1307,8 +1302,19 @@ class Gain_Plot:
         obj = plt.text (*off, '\n'.join (self.desc), transform = ax.transAxes)
         self.gui_objects [name]['text'] = obj
         args = dict (linestyle = 'solid', linewidth = 1.5)
-        obj, = ax.plot (self.angles, self.polargains, **args)
-        self.gui_objects [name]['data'] = obj
+        if self.mpl_plot_key is not None:
+            l     = self.gui_objects [name]['data'] = []
+            entry = self.mpl_by_f [self.mpl_plot_key]
+            for gd, pg in zip (entry, self.polargains):
+                label = gd.key [1]
+                obj, = ax.plot (self.angles, pg, label = label, **args)
+                l.append (obj)
+            a   = 37.5 / 180 * np.pi
+            pos = (0.5 + np.cos (a) * 0.6, 0.5 + np.sin (a) * 0.6)
+            ax.legend (loc = 'lower left', bbox_to_anchor = pos)
+        else:
+            obj, = ax.plot (self.angles, self.polargains, **args)
+            self.gui_objects [name]['data'] = obj
         #ax.grid (True)
         self.scaler.set_ticks (ax)
         # Might add color and size labelcolor='r' labelsize = 8
@@ -1861,13 +1867,22 @@ class Gain_Plot:
                 continue
             gui = self.gui_objects [name]
             data_obj = gui ['data']
-            gdata = self.gdata [self.plot_key]
-            if name == 'plot3d':
-                self.data = gdata
-                self.plot3d_matplotlib ('plot3d')
+            if self.mpl_plot_key is not None:
+                assert name != 'plot3d'
+                for dat, dobj in zip \
+                    (self.mpl_by_f [self.mpl_plot_key], data_obj):
+                    gains, g = getattr (dat, name + '_gains')(self.scaler)
+                    dobj.set_ydata (gains)
+                    gdata = dat
             else:
-                gains, g = getattr (gdata, name + '_gains')(self.scaler)
-                data_obj.set_ydata (gains)
+                gdata = self.gdata [self.plot_key]
+                if name == 'plot3d':
+                    self.data = gdata
+                    self.plot3d_matplotlib ('plot3d')
+                else:
+                    gains, g = getattr (gdata, name + '_gains')(self.scaler)
+                    data_obj.set_ydata (gains)
+            if name != 'plot3d':
                 text_obj = gui ['text']
                 text = getattr (gdata, name + '_text')(self.scaler)
                 text_obj.set_text ('\n'.join (text))
@@ -1879,13 +1894,26 @@ class Gain_Plot:
     # end def update_display
 
     def keypress (self, event):
-        idx = self.plot_keys.index (self.plot_key)
+        idx     = self.plot_keys.index (self.plot_key)
+        if self.mpl_plot_key is not None:
+            midx    = self.mpl_plot_keys.index (self.mpl_plot_key)
+        changed = False
         if event.key == "+":
-            if idx < len (self.plot_keys) - 1:
-                self.plot_key = self.plot_keys [idx + 1]
+            if self.mpl_plot_key is not None:
+                if midx < len (self.mpl_plot_keys) - 1:
+                    self.mpl_plot_key = self.mpl_plot_keys [midx + 1]
+                    changed = True
+            else:
+                if idx < len (self.plot_keys) - 1:
+                    self.plot_key = self.plot_keys [idx + 1]
         elif event.key == "-":
-            if idx > 0:
-                self.plot_key = self.plot_keys [idx - 1]
+            if self.mpl_plot_key is not None:
+                if midx > 0:
+                    self.mpl_plot_key = self.mpl_plot_keys [midx - 1]
+                    changed = True
+            else:
+                if idx > 0:
+                    self.plot_key = self.plot_keys [idx - 1]
         elif event.key == 'a':
             self.scaler = self.scalers ['arrl']
             self.update_display ()
@@ -1904,19 +1932,9 @@ class Gain_Plot:
                 gui = self.gui_objects ['plot3d']['data']
                 gui.set_alpha (not self.wireframe)
                 self.fig.canvas.draw ()
-        if self.cur_key != self.plot_key:
-            # Do not call update_display when slider has changed, this
-            # is done by slider
-            if self.freq_slider:
-                self.freq_slider.set_val (self.plot_key)
-            else:
-                self.update_display ()
+        if self.cur_key != self.plot_key or changed:
+            self.update_display ()
     # end def keypress
-
-    def update_from_slider (self, val):
-        self.plot_key = self.freq_slider.val
-        self.update_display ()
-    # end def update_from_slider
 
 # end class Gain_Plot
 
@@ -2063,15 +2081,6 @@ def options_gain (cmd = None):
                     'maximum gain angle'
         , type    = float
         )
-    # For versions below 3.5 slider will be always off
-    if matplotlib_version_float >= 3.5:
-        cmd.add_argument \
-            ( '--with-frequency-slider', '--with-slider'
-            , dest    = 'with_slider'
-            , help    = 'Turn on frequency slider, frequency can be stepped'
-                        ' with +/- keys and slider is very slow.'
-            , action  = 'store_true'
-            )
     cmd.add_argument \
         ( '--interpolate-azimuth-step'
         , help    = 'Interpolate azimuth angles from 0 to 360 with this'
@@ -2083,6 +2092,13 @@ def options_gain (cmd = None):
         , help    = 'Margin around 3D plot in pixel for plotly backend'
         , type    = int
         , default = 20
+        )
+    cmd.add_argument \
+        ( '--matplotlib-polarization-in-one'
+        , dest    = 'mpl_pol_in_1'
+        , help    = 'Plot polarizations for one frequency in one plot'
+                    ' for matplotlib'
+        , action  = 'store_true'
         )
     cmd.add_argument \
         ( '--polarization'
@@ -2247,8 +2263,6 @@ def process_args (cmd, argv = sys.argv [1:]):
         if args.decibel_style not in deci_styles:
             cmd.print_usage ()
             exit ('Invalid decibel-style: "%s"' % args.decibel_style)
-    if not hasattr (args, 'with_slider'):
-        args.with_slider = False
     if getattr (args, 'polarization', None) is not None:
         args.polarization = dict.fromkeys (args.polarization)
     return args
