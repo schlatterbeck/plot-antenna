@@ -1142,20 +1142,21 @@ class Gain_Plot:
         self.labels  = 'XY'
         if self.mpl_plot_key is not None:
             self.polargains = []
-            lidx = None
+            self.angles     = []
             for dat in self.mpl_by_f [self.mpl_plot_key]:
                 pg, self.unscaled = dat.azimuth_gains (self.scaler)
                 indexes = np.logical_not (np.isnan (pg))
-                assert lidx is None or (lidx == indexes).all ()
-                lidx = indexes
                 self.polargains.append (pg [indexes])
+                self.angles.append (dat.phis  [indexes])
         else:
             self.polargains, self.unscaled = self.data.azimuth_gains \
                 (self.scaler)
             indexes = np.logical_not (np.isnan (self.polargains))
             self.polargains = self.polargains [indexes]
+            self.angles = self.data.phis  [indexes]
+        # The unscaled values are not used by matplotlib, so no need to
+        # keep multiple copies.
         self.unscaled   = self.unscaled   [indexes]
-        self.angles     = self.data.phis  [indexes]
         self.polarplot (name)
     # end def azimuth
 
@@ -1173,24 +1174,26 @@ class Gain_Plot:
         self.desc = self.data.elevation_text (self.scaler)
         self.lbl_deg  = 90 - self.data.thetas_d [self.theta_angle_idx]
         self.labels   = None
+        p2            = np.pi / 2
         if self.mpl_plot_key is not None:
             self.polargains = []
-            lidx = None
+            self.angles     = []
             for dat in self.mpl_by_f [self.mpl_plot_key]:
                 pg, self.unscaled = dat.elevation_gains (self.scaler)
                 indexes = np.logical_not (np.isnan (pg))
-                assert lidx is None or (lidx == indexes).all ()
-                lidx = indexes
                 self.polargains.append (pg [indexes])
+                thetas = dat.thetas
+                self.angles.append \
+                    (np.append (p2 - thetas, np.flip (p2 + thetas)) [indexes])
         else:
             self.polargains, self.unscaled = self.data.elevation_gains \
                 (self.scaler)
             indexes = np.logical_not (np.isnan (self.polargains))
             self.polargains = self.polargains [indexes]
+            thetas = self.data.thetas
+            self.angles = np.append \
+                (p2 - thetas, np.flip (p2 + thetas)) [indexes]
         self.unscaled   = self.unscaled   [indexes]
-        thetas = self.data.thetas
-        p2 = np.pi / 2
-        self.angles = np.append (p2 - thetas, np.flip (p2 + thetas)) [indexes]
         self.polarplot (name)
     # end def elevation
 
@@ -1305,9 +1308,9 @@ class Gain_Plot:
         if self.mpl_plot_key is not None:
             l     = self.gui_objects [name]['data'] = []
             entry = self.mpl_by_f [self.mpl_plot_key]
-            for gd, pg in zip (entry, self.polargains):
+            for gd, pg, angle in zip (entry, self.polargains, self.angles):
                 label = gd.key [1]
-                obj, = ax.plot (self.angles, pg, label = label, **args)
+                obj, = ax.plot (angle, pg, label = label, **args)
                 l.append (obj)
             a   = 37.5 / 180 * np.pi
             pos = (0.5 + np.cos (a) * 0.6, 0.5 + np.sin (a) * 0.6)
@@ -1869,8 +1872,8 @@ class Gain_Plot:
             data_obj = gui ['data']
             if self.mpl_plot_key is not None:
                 assert name != 'plot3d'
-                for dat, dobj in zip \
-                    (self.mpl_by_f [self.mpl_plot_key], data_obj):
+                entry = self.mpl_by_f [self.mpl_plot_key]
+                for dat, dobj in zip (entry, data_obj):
                     gains, g = getattr (dat, name + '_gains')(self.scaler)
                     dobj.set_ydata (gains)
                     gdata = dat
