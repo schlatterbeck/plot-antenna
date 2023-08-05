@@ -245,10 +245,20 @@ def format_f (f, precision = 3):
 # end def format_f
 
 class Gain_Data:
+    """ Store gain data by key
+        This is used during all sorts of parsing and/or generating
+        values some other way.
+        The key is a tuple, the first (index 0) value is the frequency.
+        Next value (optionally) is the polarization, the values we're
+        using are 'H' for horizontal, 'V' for vertical and 'sum' for the
+        sum, but other parsers may use different values.
+        Circular polarization is not yet parsed from NEC output, MININEC
+        doesn't compute circular polarization.
+    """
 
-    def __init__ (self, f, parent = None):
+    def __init__ (self, key, parent = None):
         self.parent   = parent
-        self.f        = f
+        self.key      = key
         self.pattern  = {}
     # end def __init__
 
@@ -297,7 +307,7 @@ class Gain_Data:
         self.theta_max = self.thetas_d [self.theta_maxidx]
         self.phi_max   = self.phis_d   [self.phi_maxidx]
         self.desc      = ['Title: %s' % self.parent.title]
-        self.desc.append ('Frequency: ' + format_f (self.f, 2))
+        self.desc.append ('Frequency: ' + format_f (self.key [0], 2))
         self.lbl_deg   = 0
         self.labels    = None
     # end def compute
@@ -312,6 +322,9 @@ class Gain_Data:
         desc = self.desc.copy ()
         desc.insert (0, 'Azimuth Pattern')
         unit = self.parent.args.dB_unit
+        # Can't be computed in self.desc because len of pol_keys not yet known
+        if len (self.parent.pol_keys) > 1:
+            desc.append ('Polarization: ' + self.key [1])
         desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
@@ -342,6 +355,9 @@ class Gain_Data:
         desc = self.desc.copy ()
         desc.insert (0, 'Elevation Pattern')
         unit = self.parent.args.dB_unit
+        # Can't be computed in self.desc because len of pol_keys not yet known
+        if len (self.parent.pol_keys) > 1:
+            desc.append ('Polarization: ' + self.key [1])
         desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
@@ -472,7 +488,6 @@ class Gain_Plot:
         self.filename    = args.filename
         self.outfile     = args.output_file
         self.save_format = getattr (args, 'save_format', None)
-        self.f           = None
         self.with_slider = args.with_slider
         self.wireframe   = args.wireframe
         self.scalers     = dict \
@@ -491,8 +506,8 @@ class Gain_Plot:
         # Default title from filename
         self.title = os.path.splitext (os.path.basename (args.filename)) [0]
         self.gdata = gdata
-        for f in self.gdata:
-            gd = self.gdata [f]
+        for key in self.gdata:
+            gd = self.gdata [key]
             assert gd.parent is None
             gd.parent = self
         self.geo   = geo or []
@@ -500,6 +515,8 @@ class Gain_Plot:
         self.segments    = []
         self.has_ground  = has_ground
         self.loaded_segs = loaded_segs or {}
+        self.frq_keys    = set ()
+        self.pol_keys    = set ()
     # end def __init__
 
     @classmethod
@@ -510,6 +527,23 @@ class Gain_Plot:
         gp.read_file (filename)
         return gp
     # end def from_file
+
+    @property
+    def legend_name (self):
+        pol_key = ''
+        if len (self.pol_keys) > 1:
+            pol_key = 'pol=' + self.plot_key [1]
+        frq_key = "f=" + format_f (self.plot_key [0])
+        if pol_key:
+            if len (self.frq_keys) > 1:
+                key = ' '.join ((frq_key, pol_key))
+            else:
+                key = pol_key
+        else:
+            key = frq_key
+        return key
+    # end def legend_name
+
 
     @property
     def plotly_polar_default (self):
@@ -665,8 +699,8 @@ class Gain_Plot:
 
     def all_gains (self):
         xyz = None
-        for f in self.frequencies:
-            g = self.gdata [f]
+        for key in self.plot_keys:
+            g = self.gdata [key]
             _, _, X, Y, Z = g.plot3d_gains (self.scaler)
             if xyz is None:
                 xyz = np.array ([X, Y, Z]).T
@@ -679,12 +713,23 @@ class Gain_Plot:
         # If there is a title option it wins:
         if self.args.title:
             self.title = self.args.title
-        self.frequencies = []
+        self.plot_keys = []
         self.maxg = None
         theta_idx = {}
         phi_idx   = {}
-        for f in sorted (self.gdata):
-            gdata = self.gdata [f]
+        for key in sorted (list (self.gdata)):
+            if len (key) > 1:
+                if self.args.polarization:
+                    if key [1] not in self.args.polarization:
+                        del self.gdata [key]
+                        continue
+                elif key [1] != 'sum':
+                    del self.gdata [key]
+                    continue
+            self.frq_keys.add (key [0])
+            if len (key) > 1:
+                self.pol_keys.add (key [1])
+            gdata = self.gdata [key]
             if self.args.interpolate_azimuth_step:
                 gdata.interpolate_azimuth (self.args.interpolate_azimuth_step)
             gdata.compute ()
@@ -696,9 +741,8 @@ class Gain_Plot:
             phi_idx [gdata.phi_maxidx] += 1
             if self.maxg is None or self.maxg < gdata.maxg:
                 self.maxg = gdata.maxg
-            self.frequencies.append (f)
-        # Compute the theta index that occurs most often over all
-        # frequencies
+            self.plot_keys.append (key)
+        # Compute the theta index that occurs most often over all frequencies
         self.theta_maxidx = list \
             (sorted (theta_idx, key = lambda a: theta_idx [a])) [-1]
         self.phi_maxidx = list \
@@ -730,6 +774,7 @@ class Gain_Plot:
         gdata     = None
         status    = 'start'
         wires     = []
+        impedance = None
         with open (filename, 'r') as f:
             for line in f:
                 line = line.strip ()
@@ -864,23 +909,15 @@ class Gain_Plot:
                     else:
                         assert np.linalg.norm (self.geo [-1][-1] - st) < eps
                         self.geo [-1].append (en)
+                # Same for NEC and MININEC:
                 if line.startswith ('FREQUENCY'):
                     f = float (line.split (':') [1].split () [0])
-                    if f in self.gdata:
-                        print \
-                            ( "Warning: Frequency %2.2f already present, "
-                              "using last occurrence"
-                            , file = sys.stderr
-                            )
-                        gdata = self.gdata [f]
-                    else:
-                        gdata = self.gdata [f] = Gain_Data (f, self)
                     delimiter = guard
                     continue
                 if line.startswith ('IMPEDANCE ='):
                     m = line.split ('(', 1)[1].split (')')[0].rstrip ('J')
                     a, b = (float (x) for x in m.split (','))
-                    gdata.impedance = a + 1j * b
+                    impedance = a + 1j * b
                     delimiter = guard
                     continue
                 # NEC2 file
@@ -892,7 +929,7 @@ class Gain_Plot:
                     l = line.split ()
                     assert len (l) == 11
                     a, b = (float (x) for x in l [6:8])
-                    gdata.impedance = a + 1j * b
+                    impedance = a + 1j * b
                     status = 'start'
                     continue
                 # File might end with Ctrl-Z (DOS EOF)
@@ -903,18 +940,26 @@ class Gain_Plot:
                 if delimiter == guard:
                     # Original Basic implementation gain output
                     if line.endswith (',D'):
+                        status = 'gnn' # old Basic gain file
                         delimiter = ','
                         f = self.args.default_frequency
-                        gdata = self.gdata [f] = Gain_Data (f, self)
-                        continue
-                    if line.startswith ('ANGLE') and line.endswith ('(DB)'):
+                        k = (f,)
+                    elif line.startswith ('ANGLE') and line.endswith ('(DB)'):
                         delimiter = None
-                        continue
+                        status = 'mininec-gain'
                     # NEC file
-                    if  (   line.startswith ('DEGREES   DEGREES        DB')
+                    elif  (   line.startswith ('DEGREES   DEGREES        DB')
                         and line.endswith ('VOLTS/M   DEGREES')
                         ):
                         delimiter = None
+                        status = 'nec-gain'
+                    if status in ('gnn', 'mininec-gain', 'nec-gain'):
+                        for p in 'H', 'V', 'sum':
+                            k = (f, p)
+                            gdata = self.gdata [k] = Gain_Data (k, self)
+                            if impedance is not None:
+                                gdata.impedance = impedance
+                        impedance = None
                         continue
                 else:
                     if not line:
@@ -927,7 +972,11 @@ class Gain_Plot:
                         gdata = None
                         continue
                     zen, azi, vp, hp, tot = (float (x) for x in fields [:5])
-                    gdata.pattern [(zen, azi)] = tot
+                    # GNN-file, mininec gain and nec gain share the format
+                    # for the first 5 columns of gain data
+                    for p, v in (('H', hp), ('V', vp), ('sum', tot)):
+                        gdata = self.gdata [(f, p)]
+                        gdata.pattern [(zen, azi)] = v
         for w, g in zip (wires, self.geo):
             if w [0] != g [0]:
                 g.insert (0, w [0])
@@ -935,25 +984,25 @@ class Gain_Plot:
                 g.append (w [-1])
     # end def read_file
 
-    def plot (self, f = None):
-        if f is None:
-            f = next (iter (self.gdata))
-        self.frequency = f
-        self.cur_freq  = f
+    def plot (self, key = None):
+        if key is None:
+            key = next (iter (sorted (self.gdata)))
+        self.plot_key = key
+        self.cur_key  = key
         self.impedance = getattr (self.args, 'system_impedance', None)
         if getattr (self.args, 'as_stl', None):
-            self.plot3d_stl (f)
+            self.plot3d_stl (key)
         elif  (  getattr (self.args, 'export_html', None)
             or getattr (self.args, 'show_in_browser', None)
             ):
-            self.plot_plotly (f)
+            self.plot_plotly (key)
         else:
-            self.plot_matplotlib (f)
+            self.plot_matplotlib (key)
     # end def plot
 
-    def plot_plotly (self, f):
+    def plot_plotly (self, key):
         m = {}
-        self.data = self.gdata [f]
+        self.data = self.gdata [key]
         for name in self.plot_names:
             if getattr (self.args, name, None):
                 method = getattr (self, name, None)
@@ -969,7 +1018,7 @@ class Gain_Plot:
                         self.plotly_lastfig  = False
                         self.plotly_firstfig = True
                         if name == 'plot3d':
-                            if len (self.frequencies) > 1:
+                            if len (self.plot_keys) > 1:
                                 w = 0.035
                                 if self.args.decibel_style == 'both':
                                     w = 0.1
@@ -995,12 +1044,12 @@ class Gain_Plot:
                         else:
                             self.plotly_fig = go.Figure \
                                 (** self.plotly_polar_default)
-                        for n, f in enumerate (self.frequencies):
+                        for n, key in enumerate (self.plot_keys):
                             self.plotly_count = n
-                            self.frequency = f
-                            self.cur_freq  = f
-                            self.data = self.gdata [f]
-                            if f == self.frequencies [-1]:
+                            self.plot_key = key
+                            self.cur_key  = key
+                            self.data = self.gdata [key]
+                            if key == self.plot_keys [-1]:
                                 self.plotly_lastfig = True
                             method (name)
                             self.plotly_firstfig = False
@@ -1008,7 +1057,7 @@ class Gain_Plot:
                         method (name)
     # end def plot_plotly
 
-    def plot_matplotlib (self, f):
+    def plot_matplotlib (self, plotkey):
         dpi  = self.dpi
         x, y = np.array ([self.fig_x, self.fig_y]) / 80 * dpi
 
@@ -1063,7 +1112,7 @@ class Gain_Plot:
             plt.subplots_adjust \
                 (hspace = hs, top = tp, bottom = sp + bt)
         self.axes = {}
-        self.data = self.gdata [f]
+        self.data = self.gdata [plotkey]
         self.gui_objects = {}
         for name in self.plot_names:
             if name not in a:
@@ -1078,7 +1127,8 @@ class Gain_Plot:
                 method = getattr (self, name + '_matplotlib')
             method (name)
         self.freq_slider = None
-        # Make a horizontal slider to control the frequency.
+        # Make a horizontal slider to control the plot_key
+        # (typically the frequency).
         if not self.outfile:
             if self.with_slider:
                 axfreq = fig.add_axes ([0.15, 0.01, 0.65, 0.03])
@@ -1190,7 +1240,7 @@ class Gain_Plot:
         df = dict \
             ( r       = self.polargains
             , theta   = (self.angles / np.pi * 180) % 360
-            , name    = "f=" + format_f (self.frequency)
+            , name    = self.legend_name
             , mode    = 'lines'
             , visible = True if self.plotly_firstfig else 'legendonly'
             , text    = ['%.2f %s (%.2f dB)' % (u, unit, u - self.maxg)
@@ -1265,8 +1315,8 @@ class Gain_Plot:
         ax.tick_params (axis = 'y', rotation = 'auto')
         an = self.angle_name
         def format_polar_coord (x, y):
-            sc = self.scaler.invscale (y)
-            un = self.args.dB_unit
+            sc   = self.scaler.invscale (y)
+            unit = self.args.dB_unit
             return '%s=%.2f°, Gain=%.2f %s (%.2f dB)' \
                 % (an, x / np.pi * 180, sc + self.maxg, unit, sc)
         ax.format_coord = format_polar_coord
@@ -1352,6 +1402,7 @@ class Gain_Plot:
         colorbar_xpos = 1.02
         if self.legend_width:
             colorbar_xpos = 0.98 - self.legend_width
+        key = self.legend_name
         fig.add_trace \
             ( go.Surface
                 ( x = X, y = Y, z = Z
@@ -1359,7 +1410,7 @@ class Gain_Plot:
                 , colorscale   = 'rainbow'
                 , visible      = visible
                 , legendgroup  = lgroup
-                , name         = "f=" + format_f (self.frequency)
+                , name         = key
                 , colorbar = dict
                     ( tickvals = tickvals
                     , ticktext = ticktext
@@ -1371,14 +1422,14 @@ class Gain_Plot:
                 )
             , row = 1, col = 1
             )
-        if len (self.frequencies) > 1:
+        if len (self.plot_keys) > 1:
             fig.add_trace \
                 ( go.Scatter
                     ( dict (x = [1.], y = [1.], line = dict (color = 'white'))
                     , legendgroup = lgroup
                     , visible     = visible
                     , showlegend  = True
-                    , name        = "f=" + format_f (self.frequency)
+                    , name        = key
                     )
                 , row = 1, col = 2
                 )
@@ -1403,8 +1454,8 @@ class Gain_Plot:
             self.show_plotly (fig, name, script = self.plotly_3d_script)
     # end def plot3d_plotly
 
-    def plot3d_stl (self, f):
-        self.data = self.gdata [f]
+    def plot3d_stl (self, plotkey):
+        self.data = self.gdata [plotkey]
         t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         tri_e = []
         tri_a = []
@@ -1427,7 +1478,7 @@ class Gain_Plot:
 
         fn = self.args.as_stl
         if '%' in self.args.as_stl:
-            fn = self.args.as_stl % f
+            fn = self.args.as_stl % plotkey
         if not fn.endswith ('.stl'):
             fn = fn + '.stl'
         mesh.save (fn)
@@ -1442,15 +1493,15 @@ class Gain_Plot:
         real = []
         xabs = []
         xphi = []
-        for f in self.gdata:
-            gd  = self.gdata [f]
+        for key in self.gdata:
+            gd  = self.gdata [key]
             z   = gd.impedance
             rho = np.abs ((z - z0) / (z + z0))
             imag.append (z.imag)
             real.append (z.real)
             xabs.append (np.abs   (z))
             xphi.append (np.angle (z) * 180 / np.pi)
-            X.append (f)
+            X.append (key [0])
             Y.append ((1 + rho) / (1 - rho))
             Z.append (z)
         min_idx = np.argmin (Y)
@@ -1810,7 +1861,7 @@ class Gain_Plot:
                 continue
             gui = self.gui_objects [name]
             data_obj = gui ['data']
-            gdata = self.gdata [self.frequency]
+            gdata = self.gdata [self.plot_key]
             if name == 'plot3d':
                 self.data = gdata
                 self.plot3d_matplotlib ('plot3d')
@@ -1823,18 +1874,18 @@ class Gain_Plot:
                 if self.cur_scaler != self.scaler:
                     self.scaler.set_ticks (self.axes [name])
         self.fig.canvas.draw ()
-        self.cur_freq   = self.frequency
+        self.cur_key    = self.plot_key
         self.cur_scaler = self.scaler
     # end def update_display
 
     def keypress (self, event):
-        idx = self.frequencies.index (self.frequency)
+        idx = self.plot_keys.index (self.plot_key)
         if event.key == "+":
-            if idx < len (self.frequencies) - 1:
-                self.frequency = self.frequencies [idx + 1]
+            if idx < len (self.plot_keys) - 1:
+                self.plot_key = self.plot_keys [idx + 1]
         elif event.key == "-":
             if idx > 0:
-                self.frequency = self.frequencies [idx - 1]
+                self.plot_key = self.plot_keys [idx - 1]
         elif event.key == 'a':
             self.scaler = self.scalers ['arrl']
             self.update_display ()
@@ -1853,17 +1904,17 @@ class Gain_Plot:
                 gui = self.gui_objects ['plot3d']['data']
                 gui.set_alpha (not self.wireframe)
                 self.fig.canvas.draw ()
-        if self.cur_freq != self.frequency:
+        if self.cur_key != self.plot_key:
             # Do not call update_display when slider has changed, this
             # is done by slider
             if self.freq_slider:
-                self.freq_slider.set_val (self.frequency)
+                self.freq_slider.set_val (self.plot_key)
             else:
                 self.update_display ()
     # end def keypress
 
     def update_from_slider (self, val):
-        self.frequency = self.freq_slider.val
+        self.plot_key = self.freq_slider.val
         self.update_display ()
     # end def update_from_slider
 
@@ -2034,6 +2085,13 @@ def options_gain (cmd = None):
         , default = 20
         )
     cmd.add_argument \
+        ( '--polarization'
+        , help    = 'Plot given polarization keys, can be specified'
+                    ' multiple times, default is to plot only sum'
+        , action  = 'append'
+        , default = []
+        )
+    cmd.add_argument \
         ( '--plot3d', '--3d', '--plot-3d', '--3D'
         , help    = 'Do a 3D plot'
         , action  = 'store_true'
@@ -2191,6 +2249,8 @@ def process_args (cmd, argv = sys.argv [1:]):
             exit ('Invalid decibel-style: "%s"' % args.decibel_style)
     if not hasattr (args, 'with_slider'):
         args.with_slider = False
+    if getattr (args, 'polarization', None) is not None:
+        args.polarization = dict.fromkeys (args.polarization)
     return args
 # end def process_args
 
