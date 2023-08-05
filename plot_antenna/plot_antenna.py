@@ -262,6 +262,18 @@ class Gain_Data:
         self.pattern  = {}
     # end def __init__
 
+    @property
+    def do_polarization (self):
+        """ This is implemented as a property because it can't be
+            computed in __init__ because parent not yet known
+        """
+        return \
+            (   len (self.parent.pol_keys) > 1
+            and self.parent.mpl_plot_key is None
+            and not self.parent.do_plotly
+            )
+    # end def do_polarization
+
     def compute (self):
         thetas = set ()
         phis   = set ()
@@ -322,8 +334,7 @@ class Gain_Data:
         desc = self.desc.copy ()
         desc.insert (0, 'Azimuth Pattern')
         unit = self.parent.args.dB_unit
-        # Can't be computed in self.desc because len of pol_keys not yet known
-        if len (self.parent.pol_keys) > 1 and self.parent.mpl_plot_key is None:
+        if self.do_polarization:
             desc.append ('Polarization: ' + self.key [1])
         desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
@@ -355,8 +366,7 @@ class Gain_Data:
         desc = self.desc.copy ()
         desc.insert (0, 'Elevation Pattern')
         unit = self.parent.args.dB_unit
-        # Can't be computed in self.desc because len of pol_keys not yet known
-        if len (self.parent.pol_keys) > 1 and self.parent.mpl_plot_key is None:
+        if self.do_polarization:
             desc.append ('Polarization: ' + self.key [1])
         desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
         desc.append ('Scaling: %s' % scaler.title)
@@ -517,6 +527,8 @@ class Gain_Plot:
         self.pol_keys     = set ()
         self.mpl_by_f     = {}
         self.mpl_plot_key = None
+        self.do_plotly    = (getattr (self.args, 'export_html', None)
+                            or getattr (self.args, 'show_in_browser', None))
     # end def __init__
 
     @classmethod
@@ -1024,9 +1036,7 @@ class Gain_Plot:
         self.impedance = getattr (self.args, 'system_impedance', None)
         if getattr (self.args, 'as_stl', None):
             self.plot3d_stl (key)
-        elif  (  getattr (self.args, 'export_html', None)
-            or getattr (self.args, 'show_in_browser', None)
-            ):
+        elif self.do_plotly:
             self.plot_plotly (key)
         else:
             if self.args.mpl_pol_in_1:
@@ -1280,7 +1290,10 @@ class Gain_Plot:
             )
         fig.add_trace (go.Scatterpolar (**df))
         if self.plotly_lastfig:
-            desc = '<br>'.join (self.desc [0:2] + self.desc [3:])
+            desc = self.desc
+            if len (self.frq_keys) > 1:
+                desc = [d for d in desc if not d.startswith ('Frequency')]
+            desc = '<br>'.join (desc)
             # don't use fig.update_layout (title = desc) which will
             # delete title attributes
             fig.layout.title.text = desc
