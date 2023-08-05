@@ -1291,7 +1291,7 @@ class Gain_Plot:
         fig.add_trace (go.Scatterpolar (**df))
         if self.plotly_lastfig:
             desc = self.desc
-            if len (self.frq_keys) > 1:
+            if len (self.frq_keys) > 1 or len (self.pol_keys) <= 1:
                 desc = [d for d in desc if not d.startswith ('Frequency')]
             desc = '<br>'.join (desc)
             # don't use fig.update_layout (title = desc) which will

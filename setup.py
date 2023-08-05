@@ -54,7 +54,10 @@ setup \
     , python_requires  = rq
     , entry_points     = dict
         ( console_scripts =
-            [ 'plot-antenna=plot_antenna.plot_antenna:main' ]
+            [ 'plot-antenna=plot_antenna.plot_antenna:main'
+            , 'plot-measurements-from-file=plot_antenna.contrib'
+              ':main_csv_measurement_data'
+            ]
         )
     , classifiers      = \
         [ 'Development Status :: 4 - Beta'
