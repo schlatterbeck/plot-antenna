@@ -23,11 +23,10 @@
 # SOFTWARE.
 # ****************************************************************************
 
+import sys
 from setuptools import setup
-try :
-    from plot_antenna import __version__
-except :
-    VERSION = None
+sys.path.insert (1, '.')
+from plot_antenna import __version__
 
 with open ('README.rst') as f:
     description = f.read ()
@@ -36,7 +35,7 @@ license     = 'MIT License'
 rq          = '>=3.7'
 setup \
     ( name             = "plot-antenna"
-    , version          = VERSION
+    , version          = __version__
     , description      =
         "Antenna plotting program for plotting antenna simulation results"
     , long_description = ''.join (description)
