@@ -28,7 +28,7 @@ def parse_csv_measurement_data (args):
           angles. For this the --interpolate-azimuth-step option was
           added. Typically we interpolate the azimuth values to e.g. a
           2° grid.
-        - Some angles are greater than 360°/180°.
+        - Some azimuth angles are greater than 360°.
     """
     gdata_dict = {}
     with open (args.filename, 'r') as f:
@@ -45,7 +45,7 @@ def parse_csv_measurement_data (args):
             azi = float (rec ['Position Drehscheibe']) % 360
             # Need to round elevation values: these sometimes differ
             # during a scan
-            ele = round (float (rec ['Position Positionierer']), 0) % 180
+            ele = round (float (rec ['Position Positionierer']), 0)
             # Don't allow values outside angle range
             if azi < 0 or azi > 360 or ele < 0 or ele > 360:
                 continue
