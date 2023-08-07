@@ -25,7 +25,7 @@
 
 from setuptools import setup
 try :
-    from plot_antenna.Version import VERSION
+    from plot_antenna import __version__
 except :
     VERSION = None
 
