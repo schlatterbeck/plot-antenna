@@ -158,6 +158,11 @@ v1.8: Allow plotting of measurement data
 - Allow plotting by polarization
 - Version computation changed to allow install from git url
 
+Note: Smith chart with matplotlib currently needs my
+`patched pySmithPlot`_ library. You can install this with::
+
+ python -m pip install pysmithplot@git+https://github.com/schlatterbeck/pySmithPlot.git
+
 v1.7: Add Smith charts, optionally show impedance and band in VSWR plots
 
 Many of the changes in this and several previous versions were suggested
@@ -234,3 +239,5 @@ v1.1: Specification of azimuth / elevation angle
   in the correct order.
 
 v1.0: Initial Release
+
+.. _`patched pySmithPlot`: https://github.com/schlatterbeck/pySmithPlot

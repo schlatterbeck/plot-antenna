@@ -16,7 +16,10 @@ from argparse import ArgumentParser, HelpFormatter
 from matplotlib import cm, __version__ as matplotlib_version, rcParams, ticker
 from matplotlib.widgets import Slider
 from matplotlib.patches import Rectangle
-from smithplot.smithaxes import SmithAxes
+try:
+    from smithplot.smithaxes import SmithAxes
+except ImportError:
+    SmithAxes = None
 try:
     import plotly.express as px
     import plotly.graph_objects as go
@@ -529,6 +532,9 @@ class Gain_Plot:
         self.mpl_plot_key = None
         self.do_plotly    = (getattr (self.args, 'export_html', None)
                             or getattr (self.args, 'show_in_browser', None))
+        if 'plot_smith' in args and SmithAxes is None and not self.do_plotly:
+            exit ('Error: Smith chart with matplotlib is only supported with '
+                  'patched smithplot library')
     # end def __init__
 
     @classmethod
