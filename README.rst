@@ -149,6 +149,15 @@ segments (e.g. with a capacity) are not shown.
 Release Notes
 -------------
 
+v1.8: Allow plotting of measurement data
+
+- Deal with sparse matrix for plot values
+- Interpolation of measured values in Phi (Azimuth) direction
+- Add STL output of 3d pattern with optional library
+- Allow setting the dB-unit (e.g. dBm for measurements)
+- Allow plotting by polarization
+- Version computation changed to allow install from git url
+
 v1.7: Add Smith charts, optionally show impedance and band in VSWR plots
 
 Many of the changes in this and several previous versions were suggested

@@ -23,10 +23,15 @@
 # SOFTWARE.
 # ****************************************************************************
 
+import os
 import sys
 from setuptools import setup
-sys.path.insert (1, '.')
-from plot_antenna import __version__
+
+if os.path.exists ("VERSION"):
+    with open ("VERSION", 'r', encoding="utf8") as f:
+        __version__ = f.read ().strip ()
+else:
+    __version__ = '0+unknown'
 
 with open ('README.rst') as f:
     description = f.read ()

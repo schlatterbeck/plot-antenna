@@ -6,7 +6,8 @@ ifeq (,${RELEASETOOLS})
 endif
 LASTRELEASE:=$(shell $(RELEASETOOLS)/lastrelease -n -rv)
 VERSIONPY=plot_antenna/Version.py
-VERSION=$(VERSIONPY)
+VERSIONTXT=VERSION
+VERSION=$(VERSIONPY) $(VERSIONTXT)
 README=README.rst
 PROJECT=plot-antenna
 
@@ -16,7 +17,7 @@ test:
 	$(PYTHON) -m pytest test
 
 clean:
-	rm -f README.html plot_antenna/Version.py announce_pypi
+	rm -f README.html $(VERSION) announce_pypi
 	rm -rf dist build upload upload_homepage ReleaseNotes.txt $(CLEAN)
 	rm -rf plot_antenna.egg-info
 	rm -f *.ppm

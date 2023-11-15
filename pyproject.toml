@@ -62,4 +62,4 @@ test = [
     ]
 
 [tool.setuptools.dynamic]
-version = {attr = "plot_antenna.__version__"}
+version = {file = "VERSION"}
