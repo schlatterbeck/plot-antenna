@@ -207,8 +207,8 @@ class Plot_Range:
                 rng = np.array ([self.min, self.min + k]) * 10 ** self.exp
                 tck = (k / 4) * 10 ** self.exp
                 return rng, tck
-        rng = np.array ([self.min, self.min + 12]) * 10 ** exp
-        tck = 3 * 10 ** exp
+        rng = np.array ([self.min, self.min + 12]) * 10 ** self.exp
+        tck = 3 * 10 ** self.exp
         return rng, tck
     # end def compute
 
@@ -930,12 +930,14 @@ class Gain_Plot:
                     self.seg_by_tag [tag].append (mid)
                     self.segments.append (mid)
                     prev, cur, next = (int (a) for a in ll [8:11])
-                    if prev == 0 or abs (prev) > idx:
+                    assert cur == idx
+                    aprev = abs (prev)
+                    if prev == 0 or aprev > idx:
                         self.geo.append ([])
                         started = True
-                    elif abs (prev) != idx - 1:
+                    elif aprev != idx - 1 and aprev != idx:
                         self.geo.append ([])
-                        a, b = necidx [abs (prev)]
+                        a, b = necidx [aprev]
                         if prev > 0:
                             b += 1
                         self.geo [-1].append (self.geo [a][b])
