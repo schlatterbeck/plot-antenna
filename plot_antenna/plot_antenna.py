@@ -891,8 +891,12 @@ class Gain_Plot:
                 if status == 'geo':
                     x, y, z, r, e1, e2, n = line.split ()
                     n = int (n)
-                    self.seg_by_tag [n] = np.array ([x, y, z])
-                    self.geo [-1].append ([float (a) for a in (x, y, z)])
+                    # Single segment case with no pulses
+                    if x == '-':
+                        self.seg_by_tag [n] = []
+                    else:
+                        self.seg_by_tag [n] = np.array ([x, y, z])
+                        self.geo [-1].append ([float (a) for a in (x, y, z)])
                     continue
                 if status == 'load':
                     if line.startswith ('PULSE'):
@@ -1030,7 +1034,7 @@ class Gain_Plot:
                         gdata = self.gdata [(f, p)]
                         gdata.pattern [(zen, azi)] = v
         for w, g in zip (wires, self.geo):
-            if w [0] != g [0]:
+            if not g or w [0] != g [0]:
                 g.insert (0, w [0])
             if w [-1] != g [-1]:
                 g.append (w [-1])
