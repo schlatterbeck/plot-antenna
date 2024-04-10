@@ -828,6 +828,7 @@ class Gain_Plot:
         with open (filename, 'r') as f:
             for line in f:
                 line = line.strip ()
+                splt = ' '.join (line.split ())
                 if  (   line.startswith ('X             Y             Z')
                     and line.endswith ('END1 END2  NO.')
                     ):
@@ -840,8 +841,8 @@ class Gain_Plot:
                     status = 'wire'
                     wires.append ([])
                     continue
-                if  (   line.startswith ('No:       X         Y         Z')
-                    and line.endswith ('I-     I    I+   No:')
+                if  (   splt.startswith ('No: X Y Z')
+                    and splt.endswith ('I- I I+ No:')
                     ):
                     status = 'necgeo'
                     necidx = {}
@@ -880,7 +881,7 @@ class Gain_Plot:
                         else:
                             if n == 0:
                                 n = m
-                            for i in range (n, m + 1):
+                            for i in range (n - 1, m):
                                 Loaded_Segment \
                                     (self.loaded_segs, segs [i], name)
                     if ll [4] == 'GN':
