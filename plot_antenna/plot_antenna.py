@@ -271,7 +271,9 @@ class Gain_Data:
             computed in __init__ because parent not yet known
         """
         return \
-            (   len (self.parent.pol_keys) > 1
+            (   (  len (self.parent.pol_keys) > 1
+                or next (iter (self.parent.pol_keys)) != 'sum'
+                )
             and self.parent.mpl_plot_key is None
             and not self.parent.do_plotly
             )
