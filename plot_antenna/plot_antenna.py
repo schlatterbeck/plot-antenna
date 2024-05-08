@@ -825,6 +825,10 @@ class Gain_Plot:
         status    = 'start'
         wires     = []
         impedance = None
+        # NEC can use Major/Minor axis or Vertc/Horiz polarizations
+        # Depending on the 'X' of the 'XNDA' field of the RP card
+        # We fill in the polarization only if we see VERTC/HORIZ
+        nec_vh    = True
         with open (filename, 'r') as f:
             for line in f:
                 line = line.strip ()
@@ -995,6 +999,12 @@ class Gain_Plot:
                 if status == 'antenna-input':
                     continue
                 if delimiter == guard:
+                    # NEC Radiation pattern specify type of polarization
+                    # vs. Major/Minor axis
+                    if splt.startswith ('THETA PHI VERTC HORIZ TOTAL'):
+                        nec_vh = True
+                    if splt.startswith ('THETA PHI MAJOR MINOR TOTAL'):
+                        nec_vh = False
                     # Original Basic implementation gain output
                     if line.endswith (',D'):
                         status = 'gnn' # old Basic gain file
@@ -1012,6 +1022,8 @@ class Gain_Plot:
                         status = 'nec-gain'
                     if status in ('gnn', 'mininec-gain', 'nec-gain'):
                         for p in 'H', 'V', 'sum':
+                            if not nec_vh and p in ('H', 'V'):
+                                continue
                             k = (f, p)
                             gdata = self.gdata [k] = Gain_Data (k, self)
                             if impedance is not None:
@@ -1032,6 +1044,8 @@ class Gain_Plot:
                     # GNN-file, mininec gain and nec gain share the format
                     # for the first 5 columns of gain data
                     for p, v in (('H', hp), ('V', vp), ('sum', tot)):
+                        if not nec_vh and p in ('H', 'V'):
+                            continue
                         gdata = self.gdata [(f, p)]
                         gdata.pattern [(zen, azi)] = v
         for w, g in zip (wires, self.geo):
