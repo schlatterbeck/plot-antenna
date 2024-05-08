@@ -67,6 +67,9 @@ def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
     aplot.options_gain (cmd)
     cmd.add_argument ('filename', help = 'CSV File to parse and plot')
     args = aplot.process_args (cmd, argv)
+    # Set default polarization, we need this otherwise the sum isn't computed
+    if not args.polarization:
+        args.polarization ['sum'] = True
     if pic_io is not None:
         args.output_file = pic_io
         args.save_format = 'png'
