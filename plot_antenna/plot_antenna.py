@@ -270,6 +270,13 @@ class Gain_Data:
         """ This is implemented as a property because it can't be
             computed in __init__ because parent not yet known
         """
+        # Special case for plotly if we're plotting a single
+        # polarization which is *not* the sum
+        if  (  self.parent.do_plotly
+            and len (self.parent.pol_keys) == 1
+            and next (iter (self.parent.pol_keys)) != 'sum'
+            ):
+            return True
         return \
             (   (  len (self.parent.pol_keys) > 1
                 or next (iter (self.parent.pol_keys)) != 'sum'
