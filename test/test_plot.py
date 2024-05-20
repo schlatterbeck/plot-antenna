@@ -1,4 +1,4 @@
-# Copyright (C) 2022-23 Ralf Schlatterbeck. All rights reserved
+# Copyright (C) 2022-24 Ralf Schlatterbeck. All rights reserved
 # Reichergasse 131, A-3411 Weidling
 # ****************************************************************************
 #
@@ -34,12 +34,14 @@ from plot_antenna.contrib import main_csv_measurement_data
 from io import BytesIO
 import matplotlib
 import plotly
+try:    
+    from smithplot.smithaxes import SmithAxes
+except ImportError:
+    SmithAxes = None
 
 # These are the generated pictures hashed by matplotlib version
 # These were tested on:
-# - Version 3.0.2 on python3.7.3  (debian buster)
-# - Version 3.3.4 on python3.9.2  (debian bullseye)
-# - Version 3.5.2 on python3.10.5 (own python build on debian bullseye)
+# - Version 3.5.2 on python3.10.5 (debian bookworm in a venv)
 # - Version 3.6.3 on python3.11.2 (debian bookworm)
 # - Version 3.7.2 on python3.11.2 (debian bookworm in a venv)
 # For plotly these are tested on
@@ -49,12 +51,15 @@ import plotly
 # Note that different outcome for the same version can depend on the
 # fonts installed in the system. So I'm quite sure this doesn't cover
 # all possible configurations.
+# Debian stable aka bookworm has matplotlib version 3.6.3 and plotly
+# version 5.4.0. The other versions are tested in venvs.
+#
+# If a version is not in the picture hash we do a binary search and take
+# the next and the prior version
 #
 picture_hashes = dict \
     (( (( ( '3d', dict
-            (( ('3.0.2', 'c76bc62f80106d79020af66d5ba30cbe32133255')
-            ,  ('3.3.4', '5e21cd5e0bf83b94a606588c4e7a3f3e52d1d152')
-            ,  ('3.5.2', '4e3be16ee73e143ab6d8e925d37fd54b9a3bb5a5')
+            (( ('3.5.2', '4e3be16ee73e143ab6d8e925d37fd54b9a3bb5a5')
             ,  ('3.6.3', '5e21cd5e0bf83b94a606588c4e7a3f3e52d1d152')
             ))
           )
@@ -65,9 +70,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'azimuth', dict
-            (( ('3.0.2', '81248b39e78fe707f59d732c8556a34e164add4f')
-            ,  ('3.3.4', '55f83891c3c297962e24def9d5e5d565eee58a72')
-            ,  ('3.5.2', '600221ff9765308069809711a779ea970de301b0')
+            (( ('3.5.2', '600221ff9765308069809711a779ea970de301b0')
             ,  ('3.6.3', '55f83891c3c297962e24def9d5e5d565eee58a72')
             ))
           )
@@ -81,9 +84,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'azimuth_db', dict
-            (( ('3.0.2', '91e3b791966caf17b1d5189d1ffe49d81fe753db')
-            ,  ('3.3.4', '853f2e33d97921a1e29b168af6c72d9102857f0c')
-            ,  ('3.5.2', 'e24bb294450bf3e666ab9e5d38fe659fa12bbd89')
+            (( ('3.5.2', 'e24bb294450bf3e666ab9e5d38fe659fa12bbd89')
             ,  ('3.6.3', '853f2e33d97921a1e29b168af6c72d9102857f0c')
             ))
           )
@@ -97,9 +98,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'azimuth_linear', dict
-            (( ('3.0.2', '660561393437790656f2be40f9959f6ee0040e18')
-            ,  ('3.3.4', 'b294d474542522e2a598d37b8ce959faa253f164')
-            ,  ('3.5.2', '283645c8cd248738afde0c512bbca6ddfe676118')
+            (( ('3.5.2', '283645c8cd248738afde0c512bbca6ddfe676118')
             ,  ('3.6.3', 'b294d474542522e2a598d37b8ce959faa253f164')
             ))
           )
@@ -113,9 +112,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'azimuth_linear_voltage', dict
-            (( ('3.0.2', 'ca0eb9b31d54d453dabc3be5594de15abd13881c')
-            ,  ('3.3.4', '8852f490bb274471a1d4453ab0ddfe29a689ae9f')
-            ,  ('3.5.2', '957e8bf68dc3155f9a98c3d7061049d797107f6f')
+            (( ('3.5.2', '957e8bf68dc3155f9a98c3d7061049d797107f6f')
             ,  ('3.6.3', '8852f490bb274471a1d4453ab0ddfe29a689ae9f')
             ))
           )
@@ -129,9 +126,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'basic_output', dict
-            (( ('3.0.2', 'b9362d804d86a8be3870c460a162aae974a05955')
-            ,  ('3.3.4', '931a908acb08eeebda27e680b12737cdbae95f1e')
-            ,  ('3.5.2', '3ce7634a5bcff4d6a9591c68f4604325938bb5ed')
+            (( ('3.5.2', '3ce7634a5bcff4d6a9591c68f4604325938bb5ed')
             ,  ('3.6.3', '931a908acb08eeebda27e680b12737cdbae95f1e')
             ))
           )
@@ -145,9 +140,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'elevation', dict
-            (( ('3.0.2', 'fd0b835fde4c976a88fd4c8419fc47ab3788f151')
-            ,  ('3.3.4', '12a547c561497050af11bd72a1e55561b00a2f5b')
-            ,  ('3.5.2', 'abcbfd16546a9aa4e02781955b3e2253cf01d0aa')
+            (( ('3.5.2', 'abcbfd16546a9aa4e02781955b3e2253cf01d0aa')
             ,  ('3.6.3', '12a547c561497050af11bd72a1e55561b00a2f5b')
             ))
           )
@@ -161,9 +154,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'gainfile', dict
-            (( ('3.0.2', '137e9550138ae29517a656785916e9e53659c535')
-            ,  ('3.3.4', 'f9234e4868fbd0104cdb10c8cad7e5a490f33dcc')
-            ,  ('3.5.2', '7eb9eda74a98a3086be5077fbe8999b3601f7582')
+            (( ('3.5.2', '7eb9eda74a98a3086be5077fbe8999b3601f7582')
             ,  ('3.6.3', 'f9234e4868fbd0104cdb10c8cad7e5a490f33dcc')
             ))
           )
@@ -177,10 +168,14 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'geo', dict
-            (( ('3.0.2', '22baea55587016bb29bdcd3b56a1dc8a87100f3d')
-            ,  ('3.3.4', '5a21d4501625eeccd70bdda13e9d197a6c00a82b')
-            ,  ('3.5.2', '2e2c52a558339b4aa4bf2f67394a09edbc0abc50')
+            (( ('3.5.2', '2e2c52a558339b4aa4bf2f67394a09edbc0abc50')
             ,  ('3.6.3', '7c085ddc21d488930b4287f01db31b431800dc9f')
+            ))
+          )
+       ,  ( 'geo_bug_plotly', dict
+            (( ('5.4.0',  '64287b7648b82a5525c6aa3e3501a927bc66ddc8')
+            ,  ('5.10.0', '64287b7648b82a5525c6aa3e3501a927bc66ddc8')
+            ,  ('5.15.0', '64287b7648b82a5525c6aa3e3501a927bc66ddc8')
             ))
           )
        ,  ( 'geo_plotly', dict
@@ -193,25 +188,21 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'measurement', dict
-            (( ('3.0.2', 'fb0c3ec927d0f8575f565631a73a7987200981c6')
-            ,  ('3.3.4', '2d55a68bd72cceaa75b7be16359057c770bf5bd8')
-            ,  ('3.5.2', 'dc2452cddef6c8c59362ce3daea576c9a8b81667')
-            ,  ('3.6.3', '2d55a68bd72cceaa75b7be16359057c770bf5bd8')
+            (( ('3.5.2', '65fead7d01e63d34c62d09daccd47147c859a7f5')
+            ,  ('3.6.3', 'fb5c176c854f739adac27a4e070963b8b3ae371b')
             ))
           )
        ,  ( 'measurement_plotly', dict
-            (( ('5.4.0',  'c98d0e03b7bf9090cf6ce9fbbe9dc132113974f8')
-            ,  ('5.10.0', 'c98d0e03b7bf9090cf6ce9fbbe9dc132113974f8')
-            ,  ('5.15.0', [ 'c98d0e03b7bf9090cf6ce9fbbe9dc132113974f8'
+            (( ('5.4.0',  'e8a382b7b7fc40b103cf67d3f058ba8eec1a19ae')
+            ,  ('5.10.0', 'e8a382b7b7fc40b103cf67d3f058ba8eec1a19ae')
+            ,  ('5.15.0', [ 'e8a382b7b7fc40b103cf67d3f058ba8eec1a19ae'
                           , '3df9716996f3f65960c5182eede8f601834d6b66'
                           ]
                )
             ))
           )
        ,  ( 'measurement_full', dict
-            (( ('3.0.2', 'c06c9c3e1129531f8263b7f8553023ce0effa6ce')
-            ,  ('3.3.4', '8afa5c3e5c3dcdc7448d8162b70cba8c99b868c4')
-            ,  ('3.5.2', '723ac9f815723bbcd1cfbc06ab1871f29026ca92')
+            (( ('3.5.2', '723ac9f815723bbcd1cfbc06ab1871f29026ca92')
             ,  ('3.6.3', '8afa5c3e5c3dcdc7448d8162b70cba8c99b868c4')
             ))
           )
@@ -225,9 +216,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'necfile', dict
-            (( ('3.0.2', 'c6f672d460e81f5f14cf69d0d9d793b41ac8a7f3')
-            ,  ('3.3.4', '36e0de54ff41c41f88530572fdcf712c77596cda')
-            ,  ('3.5.2', '68fcdc634ae889d9edea1fdcbff196e16ccd8ca9')
+            (( ('3.5.2', '68fcdc634ae889d9edea1fdcbff196e16ccd8ca9')
             ,  ('3.6.3', '36e0de54ff41c41f88530572fdcf712c77596cda')
             ))
           )
@@ -247,15 +236,12 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'plotall', dict
-            (( ('3.0.2', '5a0418e4b0a5c6c09a0765b102edb6ea7b49082b')
-            ,  ('3.3.4', '894b813078420b04011dcc5f273385b00dc68d46')
-            ,  ('3.5.2', '1c858d93cb69d95e3fe608148016f084bbc046fd')
+            (( ('3.5.2', '1c858d93cb69d95e3fe608148016f084bbc046fd')
             ,  ('3.6.3', '894b813078420b04011dcc5f273385b00dc68d46')
             ))
           )
        ,  ( 'smith', dict
-            (( ('3.0.2', 'dfa7f621afc3037fbdbc9c795e6452672b1dd3c7')
-            ,  ('3.5.2', 'ebe551b3aa8ccb2ba20b90e50338efb66af3e24b')
+            (( ('3.5.2', 'ebe551b3aa8ccb2ba20b90e50338efb66af3e24b')
             ,  ('3.6.3', '0c7cfae41d1002c5e75f31df6180f3c8e5d15581')
             ))
           )
@@ -270,9 +256,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'vswr', dict
-            (( ('3.0.2', '4bdae4121b47e9787bcf15136f22cc9aaf418a04')
-            ,  ('3.3.4', '2b01bbdd71c162ace5c5ef0683a8ef8c1703ee2c')
-            ,  ('3.5.2', '544bed7b90f16fa725bc998658de751e3b4bbc84')
+            (( ('3.5.2', '544bed7b90f16fa725bc998658de751e3b4bbc84')
             ,  ('3.6.3', '2b01bbdd71c162ace5c5ef0683a8ef8c1703ee2c')
             ))
           )
@@ -283,9 +267,7 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'vswr_extended', dict
-            (( ('3.0.2', '3ea33e12ae46ca889c0b68f80046e7dbba89d0fa')
-            ,  ('3.3.4', 'abccaab32ed29b4bc91a991a3affd2a59ee312e4')
-            ,  ('3.5.2', '8f2dffe04393666fb71bc29837f9d2e7c554b9b9')
+            (( ('3.5.2', '8f2dffe04393666fb71bc29837f9d2e7c554b9b9')
             ,  ('3.6.3', 'abccaab32ed29b4bc91a991a3affd2a59ee312e4')
             ))
           )
@@ -340,6 +322,12 @@ def check_status_matplotlib (v):
         return pytest.mark.xfail (v)
     return v
 # end def check_status_matplotlib
+
+def check_smith_available (v):
+    if SmithAxes is None:
+        return pytest.mark.xfail (v)
+    return check_status_matplotlib (v)
+# end def check_smith_available
 
 class Test_Plot (unittest.TestCase):
     debug = False
@@ -562,7 +550,7 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_necfile_swr_plotly
 
-    @check_status_matplotlib
+    @check_smith_available
     def test_smith (self):
         infile = "test/u29gbuv0.nout"
         args = ["--smith", "--system-impedance=4050", infile]
@@ -591,7 +579,7 @@ class Test_Plot (unittest.TestCase):
         args = ["--geo", "-S", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
-    # end def test_geo
+    # end def test_geo_plotly
 
     def test_measurement (self):
         infile = "test/Messdaten.csv"
@@ -624,5 +612,12 @@ class Test_Plot (unittest.TestCase):
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_measurement_full_plotly
+
+    def test_geo_bug_plotly (self):
+        infile = "test/geo-bug.nout"
+        args = ["--geo", "-S", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo_bug_plotly
 
 # end class Test_Plot

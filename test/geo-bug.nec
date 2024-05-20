@@ -1,0 +1,11 @@
+CM Geometry bug with plotly, plots only a half circle without the fix
+CE
+GA 1 64 0.159155 -180 180 0.00408718
+GA 2 64 0.17507 -180 180 0.00408718
+GM 0 0 0 0 0 0 -1.0 0 2
+GE 0
+EK 1
+EX 0 1 16 0 1 0 0 0 0 0
+FR 0 1 0 0 298 0
+RP 0 37 73 0 0 0 5 5 0 0
+EN

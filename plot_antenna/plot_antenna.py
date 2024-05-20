@@ -541,7 +541,9 @@ class Gain_Plot:
         self.mpl_plot_key = None
         self.do_plotly    = (getattr (self.args, 'export_html', None)
                             or getattr (self.args, 'show_in_browser', None))
-        if 'plot_smith' in args and SmithAxes is None and not self.do_plotly:
+        if  (   getattr (args, 'plot_smith', None)
+            and SmithAxes is None and not self.do_plotly
+            ):
             exit ('Error: Smith chart with matplotlib is only supported with '
                   'patched smithplot library')
     # end def __init__
@@ -1796,6 +1798,19 @@ class Gain_Plot:
         xr = np.array ([mid_x - max_range, mid_x + max_range])
         yr = np.array ([mid_y - max_range, mid_y + max_range])
         zr = np.array ([mid_z - max_range, mid_z + max_range])
+        # Avoid that something isn't shown due to rounding errors
+        if xr [0] > min_x:
+            xr [0] = min_x
+        if xr [1] < max_x:
+            xr [1] = max_x
+        if yr [0] > min_y:
+            yr [0] = min_y
+        if yr [1] < max_y:
+            yr [1] = max_y
+        if zr [0] > min_z:
+            zr [0] = min_z
+        if zr [1] < max_z:
+            zr [1] = max_z
         if add_ground and self.has_ground and min_z == 0:
             zr = np.array ([min_z, min_z + 2 * max_range])
         return np.array ([xr, yr, zr])
@@ -1935,7 +1950,7 @@ class Gain_Plot:
         if script is not None:
             d.update (post_script = script)
         if self.args.output_file and self.save_format:
-            fig.write_image (self.args.output_file, format = 'png')
+            fig.write_image (self.args.output_file, format = self.save_format)
         elif self.args.export_html:
             fn = self.args.export_html + '-' + name + '.html'
             fig.write_html (fn, **d)
@@ -2096,6 +2111,12 @@ def options_general (cmd = None):
                         "'directory', this needs the plotly.min.js in the "
                         "same directory as the output. See plotly docs for "
                         "details."
+            )
+        cmd.add_argument \
+            ( "--save-format"
+            , help    = "Format of file with --output-file option, "
+                        "default = %(default)s"
+            , default = 'png'
             )
         cmd.add_argument \
             ( "-S", "--show-in-browser"
