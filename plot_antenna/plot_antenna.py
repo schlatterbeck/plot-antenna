@@ -2097,6 +2097,14 @@ def options_general (cmd = None):
         ( '--output-file'
         , help    = 'Output file, default is interactive'
         )
+    cmd.add_argument \
+        ( "--dB-unit"
+        , help    = "Unit to print in diagrams, default=%(default)s,"
+                    " for antenna simulation the default is usually"
+                    " correct, for measurements of antennas the unit"
+                    " might, e.g. be dBm of the receiver"
+        , default = "dBi"
+        )
     if px is not None:
         cmd.add_argument \
             ( "-H", "--export-html"
@@ -2128,14 +2136,6 @@ def options_general (cmd = None):
             ( "--show-plotly-logo"
             , help    = "Show plotly logo in menu"
             , action  = 'store_true'
-            )
-        cmd.add_argument \
-            ( "--dB-unit"
-            , help    = "Unit to print in diagrams, default=%(default)s,"
-                        " for antenna simulation the default is usually"
-                        " correct, for measurements of antennas the unit"
-                        " might, e.g. be dBm of the receiver"
-            , default = "dBi"
             )
     return cmd
 # end def options_general
