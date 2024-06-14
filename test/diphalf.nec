@@ -1,0 +1,11 @@
+CM Monopole at resonance
+CM Brass loading
+CE We don't know the radius of the gain 2.15
+GW     1    11     0 0 0 0 0 0.228526875 .024
+GE     1
+GN     1
+LD     5     0     0      0   3.34e7
+FR     0     1     0      0  298.0  0.05
+EX     0     1     1      0    1
+RP     0    37    73   0000    0    0  5  5
+EN

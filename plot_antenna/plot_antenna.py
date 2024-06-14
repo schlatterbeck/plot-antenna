@@ -840,6 +840,7 @@ class Gain_Plot:
         # Depending on the 'X' of the 'XNDA' field of the RP card
         # We fill in the polarization only if we see VERTC/HORIZ
         nec_vh    = True
+        gnd       = False
         with open (filename, 'r') as f:
             for line in f:
                 line = line.strip ()
@@ -871,6 +872,8 @@ class Gain_Plot:
                 if line.startswith ('ENVIRONMENT'):
                     gp = int (line.split (':', 1) [-1])
                     self.has_ground = gp < 0
+                if line.startswith ('GROUND PLANE SPECIFIED'):
+                    gnd = True
                 if line.startswith ('DATA CARD No:'):
                     ll = line.split ()
                     if ll [4] == 'EX':
@@ -961,6 +964,9 @@ class Gain_Plot:
                         if prev > 0:
                             b += 1
                         self.geo [-1].append (self.geo [a][b])
+                        started = True
+                    elif prev == cur and gnd:
+                        self.geo.append ([])
                         started = True
                     necidx [idx] = (len (self.geo) - 1, len (self.geo [-1]) - 1)
                     alpha = alpha / 180 * np.pi

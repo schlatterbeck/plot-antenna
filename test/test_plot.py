@@ -215,6 +215,16 @@ picture_hashes = dict \
                )
             ))
           )
+       ,  ( 'monopole', dict
+            (( ('3.5.2', 'faf003cb6a8c659b94a9c074428d7daa8bdd6f7f')
+            ,  ('3.6.3', 'e263df49ec466597eccf32337923f3a7dbd9337b')
+            ))
+          )
+       ,  ( 'monopole_plotly', dict
+            (( ('5.4.0',  '6744ee0e3c4a7f53db772dba633c71e4c91a298b')
+             ,
+            ))
+          )
        ,  ( 'necfile', dict
             (( ('3.5.2', '68fcdc634ae889d9edea1fdcbff196e16ccd8ca9')
             ,  ('3.6.3', '36e0de54ff41c41f88530572fdcf712c77596cda')
@@ -619,5 +629,19 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_geo_bug_plotly
+
+    def test_monopole (self):
+        infile = "test/diphalf.nout"
+        args = ["--geo", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_monopole
+
+    def test_monopole_plotly (self):
+        infile = "test/diphalf.nout"
+        args = ["--geo", "-S", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_monopole_plotly
 
 # end class Test_Plot
