@@ -1,10 +1,10 @@
 # To use this Makefile, get a copy of my SF Release Tools
-# git clone git://git.code.sf.net/p/sfreleasetools/code sfreleasetools
-# And point the environment variable RELEASETOOLS to the checkout
-ifeq (,${RELEASETOOLS})
-    RELEASETOOLS=../releasetools
+# git clone git://git.code.sf.net/p/sfreleasetools/code sfreleasetool
+# And point the environment variable RELEASETOOL to the checkout
+ifeq (,${RELEASETOOL})
+    RELEASETOOL=../releasetool
 endif
-LASTRELEASE:=$(shell $(RELEASETOOLS)/lastrelease -n -rv)
+LASTRELEASE:=$(shell $(RELEASETOOL)/lastrelease -n -rv)
 VERSIONPY=plot_antenna/Version.py
 VERSIONTXT=VERSION
 VERSION=$(VERSIONPY) $(VERSIONTXT)
@@ -24,4 +24,4 @@ clean:
 
 .PHONY: clean test
 
-include $(RELEASETOOLS)/Makefile-pyrelease
+include $(RELEASETOOL)/Makefile-pyrelease
