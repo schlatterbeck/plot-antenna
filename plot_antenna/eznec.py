@@ -19,6 +19,7 @@ def parse_eznec_data (args):
         for line in rfile:
             line = line.strip ()
             if state == 'start':
+                line = line.replace (',', '.')
                 if line.startswith ('Frequency'):
                     if not line.endswith ('MHz'):
                         raise ValueError \
@@ -52,6 +53,7 @@ def parse_eznec_data (args):
                 if not line:
                     state = 'start'
                     continue
+                line   = line.replace (',', '.')
                 values = line.split ()
                 deg = int (values [0])
                 if state == 'ele':
