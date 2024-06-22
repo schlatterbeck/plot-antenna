@@ -334,11 +334,14 @@ class Gain_Data:
         self.desc.append ('Frequency: ' + format_f (self.key [0], 2))
         self.lbl_deg   = 0
         self.labels    = None
+        self.maxgain   = self.parent.args.maxgain
+        if self.maxgain is None:
+            self.maxgain = self.maxg
     # end def compute
 
     def azimuth_gains (self, scaler):
         g = self.gains [self.parent.theta_angle_idx]
-        gains = scaler.scale (self.parent.maxg, g)
+        gains = scaler.scale (self.maxgain, g)
         return gains, g
     # end def azimuth_gains
 
@@ -348,7 +351,7 @@ class Gain_Data:
         unit = self.parent.args.dB_unit
         if self.do_polarization:
             desc.append ('Polarization: ' + self.key [1])
-        desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
+        desc.append ('Outer ring: %.2f %s' % (self.maxgain, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Elevation: %.2f°'
@@ -370,7 +373,7 @@ class Gain_Data:
         assert diff - np.pi <= self.max_phi_diff
         gains2 = self.gains.T [idx].T
         g = np.append (gains1, np.flip (gains2))
-        gains = scaler.scale (self.parent.maxg, g)
+        gains = scaler.scale (self.maxgain, g)
         return gains, g
     # end def elevation_gains
 
@@ -380,7 +383,7 @@ class Gain_Data:
         unit = self.parent.args.dB_unit
         if self.do_polarization:
             desc.append ('Polarization: ' + self.key [1])
-        desc.append ('Outer ring: %.2f %s' % (self.parent.maxg, unit))
+        desc.append ('Outer ring: %.2f %s' % (self.maxgain, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Azimuth: %.2f° (X=0°)'
@@ -507,7 +510,11 @@ class Gain_Plot:
     c_imag = '#FFB329'
 
     def __init__ \
-        (self, args, gdata, geo = None, has_ground = False, loaded_segs = None):
+        ( self, args, gdata
+        , geo         = None
+        , has_ground  = False
+        , loaded_segs = None
+        ):
         self.args        = args
         self.dpi         = args.dpi
         self.filename    = args.filename
@@ -804,6 +811,9 @@ class Gain_Plot:
             phi_idx [gdata.phi_maxidx] += 1
             if self.maxg is None or self.maxg < gdata.maxg:
                 self.maxg = gdata.maxg
+        self.maxgain = self.args.maxgain
+        if self.maxgain is None:
+            self.maxgain = self.maxg
         self.mpl_plot_keys = list (sorted (self.mpl_by_f))
         # Compute the theta index that occurs most often over all frequencies
         self.theta_maxidx = list \
@@ -1327,7 +1337,7 @@ class Gain_Plot:
             , name    = self.legend_name
             , mode    = 'lines'
             , visible = True if self.plotly_firstfig else 'legendonly'
-            , text    = ['%.2f %s (%.2f dB)' % (u, unit, u - self.maxg)
+            , text    = ['%.2f %s (%.2f dB)' % (u, unit, u - self.maxgain)
                          for u in self.unscaled
                         ]
             , hovertemplate = tpl
@@ -1416,7 +1426,7 @@ class Gain_Plot:
             sc   = self.scaler.invscale (y)
             unit = self.args.dB_unit
             return '%s=%.2f°, Gain=%.2f %s (%.2f dB)' \
-                % (an, x / np.pi * 180, sc + self.maxg, unit, sc)
+                % (an, x / np.pi * 180, sc + self.maxgain, unit, sc)
         ax.format_coord = format_polar_coord
     # end def polarplot_matplotlib
 
@@ -2210,6 +2220,11 @@ def options_gain (cmd = None):
         , help    = 'Plot polarizations for one frequency in one plot'
                     ' for matplotlib'
         , action  = 'store_true'
+        )
+    cmd.add_argument \
+        ( '-0', '--maxgain'
+        , help    = 'Maximum gain at 0dB default is maxium from data'
+        , type    = float
         )
     cmd.add_argument \
         ( '--polarization'
