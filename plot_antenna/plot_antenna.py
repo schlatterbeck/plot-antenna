@@ -669,6 +669,13 @@ class Gain_Plot:
                 , paper_bgcolor = 'white'
                 , plot_bgcolor  = 'white'
                 , hovermode     = 'x unified'
+                , title = dict
+                    ( font = dict
+                        ( family = self.font_sans
+                        , color  = "#010101"
+                        , size   = 24
+                        )
+                    )
                 )
             )
         return d
@@ -712,6 +719,14 @@ class Gain_Plot:
                         , tickformat     = '.3f'
                         )
                     , aspectratio = dict (x=1, y=1, z=1)
+                    )
+                , title = dict
+                    ( font = dict
+                        ( family = self.font_sans
+                        , color  = "#010101"
+                        , size   = 24
+                        )
+                    , y = 0.99
                     )
                 )
             )
@@ -1142,6 +1157,7 @@ class Gain_Plot:
                                     , column_widths = [1]
                                     )
                             self.plotly_fig.update (self.plotly_3d_default)
+                            self.plotly_fig.layout.title.text = self.title
                         else:
                             self.plotly_fig = go.Figure \
                                 (** self.plotly_polar_default)
@@ -1440,6 +1456,7 @@ class Gain_Plot:
         ax = self.axes [name]
         _, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         xr, yr, zr = self.scene_ranges ((X, Y, Z))
+        ax.set_title (self.title)
         ax.set_xlim (xr)
         ax.set_ylim (yr)
         ax.set_zlim (zr)
@@ -1640,6 +1657,7 @@ class Gain_Plot:
 
     def plot_vswr_matplotlib (self, name):
         ax = self.axes [name]
+        ax.set_title  (self.title)
         ax.set_xlabel ('Frequency (MHz)')
         ax.set_ylabel ('VSWR', color = self.c_vswr)
         X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
@@ -1737,6 +1755,7 @@ class Gain_Plot:
         self.add_plotly_df ("VSWR", line = lstyle)
         y = layout ['layout']['yaxis']
         y.update (**Plot_Range (Y, 1).as_plotly ())
+        layout ['layout']['title']['text'] = self.title
         layout ['layout']['yaxis']['title'].update  (text = "VSWR")
         layout ['layout']['xaxis'].update \
             (title = dict (text = 'Frequency (MHz)'))
@@ -1839,6 +1858,7 @@ class Gain_Plot:
         xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T, True)
         fig = px.line_3d ()
         fig.update (self.plotly_3d_default)
+        fig.layout.title.text = self.title
         geo = []
         for n, g in enumerate (self.geo):
             if geo:
@@ -1887,6 +1907,7 @@ class Gain_Plot:
         ax.set_xlabel ('X')
         ax.set_ylabel ('Y')
         ax.set_zlabel ('Z')
+        ax.set_title  (self.title)
         for g in self.geo:
             g = np.array (g)
             x, y, z = g.T
