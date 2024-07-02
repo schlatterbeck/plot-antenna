@@ -627,6 +627,7 @@ class Gain_Plot:
                     , domain      = [0, 0.9]
                     #, ticksuffix  = ' MHz'
                     , tickformat  = '.1f'
+                    , hoverformat = '.2f'
                     , zeroline    = False
                     )
                 , yaxis = dict
@@ -637,7 +638,7 @@ class Gain_Plot:
                     , title       = {}
                     , anchor      = "x"
                     , side        = "left"
-                    , hoverformat = '.2f'
+                    , hoverformat = '.3f'
                     , zeroline    = False
                     )
                 , yaxis2 = dict
@@ -913,7 +914,9 @@ class Gain_Plot:
                                 Loaded_Segment \
                                     (self.loaded_segs, segs [i], name)
                     if ll [4] == 'GN':
-                        self.has_ground = True
+                        typ = int (ll [5])
+                        if typ >= 0:
+                            self.has_ground = True
                 if status != 'start' and not line:
                     status  = 'start'
                     continue
