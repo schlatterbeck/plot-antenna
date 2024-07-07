@@ -936,6 +936,9 @@ class Gain_Plot:
                     status  = 'start'
                     continue
                 if status == 'geo':
+                    if not line [0].isnumeric ():
+                        status = 'start'
+                        continue
                     x, y, z, r, e1, e2, n = line.split ()
                     n = int (n)
                     # Single segment case with no pulses
@@ -1076,16 +1079,26 @@ class Gain_Plot:
                         impedance = None
                         continue
                 else:
-                    if not line:
+                    if not line or not line [0].isnumeric ():
                         delimiter = guard
                         gdata = None
+                        status = 'start'
                         continue
                     fields = line.split (delimiter)
-                    if len (fields) < 5 or not fields [0][0].isnumeric ():
+                    # Special case of older mininec format, w
+                    old_mininec = False
+                    if len (fields) == 4 and fields [0][0].isnumeric ():
+                        old_mininec = True
+                    elif len (fields) < 5 or not fields [0][0].isnumeric ():
                         delimiter = guard
                         gdata = None
                         continue
-                    zen, azi, vp, hp, tot = (float (x) for x in fields [:5])
+                    if old_mininec:
+                        zen, azi, vp, hp = (float (x) for x in fields [:4])
+                        v = 10 ** (vp / 10) + 10 ** (hp / 10)
+                        tot = np.log (v) / np.log (10)
+                    else:
+                        zen, azi, vp, hp, tot = (float (x) for x in fields [:5])
                     # GNN-file, mininec gain and nec gain share the format
                     # for the first 5 columns of gain data
                     for p, v in (('H', hp), ('V', vp), ('sum', tot)):

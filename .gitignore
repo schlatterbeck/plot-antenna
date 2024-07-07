@@ -15,6 +15,7 @@
 *.log
 *.out
 *.ppm
+VERSION
 README.html
 __pycache__
 build
