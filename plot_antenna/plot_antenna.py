@@ -862,6 +862,7 @@ class Gain_Plot:
         status    = 'start'
         wires     = []
         impedance = None
+        geowire   = None
         # NEC can use Major/Minor axis or Vertc/Horiz polarizations
         # Depending on the 'X' of the 'XNDA' field of the RP card
         # We fill in the polarization only if we see VERTC/HORIZ
@@ -874,7 +875,8 @@ class Gain_Plot:
                 if  (   line.startswith ('X             Y             Z')
                     and line.endswith ('END1 END2  NO.')
                     ):
-                    status = 'geo'
+                    status  = 'geo'
+                    geowire = None
                     self.geo.append ([])
                     continue
                 if  (   line.startswith ('X             Y             Z')
@@ -883,6 +885,13 @@ class Gain_Plot:
                     status = 'wire'
                     wires.append ([])
                     continue
+                if  (  line.startswith ('END ONE COORDINATES')
+                    or line.startswith ('END TWO COORDINATES')
+                    ):
+                    if 'TWO' not in line:
+                        wires.append ([])
+                    r = line.split (':', 1)[-1].strip ()
+                    wires [-1].append ([float (x) for x in r.split (',')])
                 if  (   splt.startswith ('No: X Y Z')
                     and splt.endswith ('I- I I+ No:')
                     ):
@@ -901,6 +910,8 @@ class Gain_Plot:
                 if line.startswith ('ENVIRONMENT'):
                     gp = int (line.split (':', 1) [-1])
                     self.has_ground = gp < 0
+                    if not self.has_ground and '2-GROUND' in line:
+                        self.has_ground = gp == 2
                 if line.startswith ('GROUND PLANE SPECIFIED'):
                     gnd = True
                 if line.startswith ('DATA CARD No:'):
@@ -948,6 +959,10 @@ class Gain_Plot:
                     if x == '-':
                         self.seg_by_tag [n] = []
                     else:
+                        e1, e2 = (abs (int (x)) for x in (e1, e2))
+                        if geowire is not None and max (e1, e2) > geowire:
+                            self.geo.append ([])
+                        geowire = max (e1, e2)
                         self.seg_by_tag [n] = np.array ([x, y, z])
                         self.geo [-1].append ([float (a) for a in (x, y, z)])
                     continue
