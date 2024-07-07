@@ -892,6 +892,9 @@ class Gain_Plot:
                 if line.startswith ('NO. OF SOURCES'):
                     status = 'source'
                     continue
+                if line.startswith ('NO. OF EXCITATIONS'):
+                    status = 'source'
+                    continue
                 if line.startswith ('NUMBER OF LOADS'):
                     status = 'load'
                     continue
