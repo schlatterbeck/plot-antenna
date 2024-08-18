@@ -863,13 +863,18 @@ class Gain_Plot:
         wires     = []
         impedance = None
         geowire   = None
+        asap_p    = 'THETA PHI ' * 2 + 'REAL IMAG MAGN PHASE ' * 2
+        asap_p    = asap_p.strip ()
+        gain_fmt  = ('gnn', 'mininec-gain', 'nec-gain', 'asap-gain')
+        log10     = np.log (10)
+        f         = None
         # NEC can use Major/Minor axis or Vertc/Horiz polarizations
         # Depending on the 'X' of the 'XNDA' field of the RP card
         # We fill in the polarization only if we see VERTC/HORIZ
         nec_vh    = True
         gnd       = False
-        with open (filename, 'r') as f:
-            for line in f:
+        with open (filename, 'r') as fp:
+            for line in fp:
                 line = line.strip ()
                 splt = ' '.join (line.split ())
                 if  (   line.startswith ('X             Y             Z')
@@ -898,6 +903,9 @@ class Gain_Plot:
                     status = 'necgeo'
                     necidx = {}
                     continue
+                if splt == 'NO. NO. X Y Z NO. X Y Z':
+                    status = 'asap-geo'
+                    continue
                 if line.startswith ('NO. OF SOURCES'):
                     status = 'source'
                     continue
@@ -914,6 +922,12 @@ class Gain_Plot:
                         self.has_ground = gp == 2
                 if line.startswith ('GROUND PLANE SPECIFIED'):
                     gnd = True
+                if line == 'ANTENNA FEEDS':
+                    status = 'asap-feed'
+                    continue
+                if line == 'STRUCTURE LOADS':
+                    status = 'asap-load'
+                    continue
                 if line.startswith ('DATA CARD No:'):
                     ll = line.split ()
                     if ll [4] == 'EX':
@@ -949,6 +963,44 @@ class Gain_Plot:
                 if status != 'start' and not line:
                     status  = 'start'
                     continue
+                if status == 'asap-feed':
+                    if splt == 'NODE VOLTS':
+                        continue
+                    if splt == 'NO. REAL IMAGINARY':
+                        continue
+                    n, re, im = line.split ()
+                    name = 'Excitation'
+                    tag  = int (n)
+                    Loaded_Segment \
+                        (self.loaded_segs, self.seg_by_tag [tag], name)
+                if status == 'asap-load':
+                    if splt == 'SEGMENT OHMS':
+                        status = 'start'
+                        continue
+                    if splt == 'NODE OHMS':
+                        continue
+                    if splt == 'NO REAL IMAGINARY':
+                        continue
+                    if splt == 'NO. REAL IMAGINARY':
+                        continue
+                    n, re, im = line.split ()
+                    name = 'Impedance'
+                    tag  = int (n)
+                    Loaded_Segment \
+                        (self.loaded_segs, self.seg_by_tag [tag], name)
+                if status == 'asap-geo':
+                    sn, n1, x1, y1, z1, n2, x2, y2, z2 = \
+                        (float (x) for x in line.split ())
+                    e1  = np.array ([x1, y1, z1])
+                    e2  = np.array ([x2, y2, z2])
+                    n1, n2 = (int (x) for x in (n1, n2))
+                    mid = (e1 + e2) / 2
+                    if n1 not in self.seg_by_tag:
+                        self.seg_by_tag [n1] = e1
+                    if n2 not in self.seg_by_tag:
+                        self.seg_by_tag [n2] = e2
+                    self.segments.append (mid)
+                    self.geo.append ([e1, e2])
                 if status == 'geo':
                     if not line [0].isnumeric ():
                         status = 'start'
@@ -1036,9 +1088,12 @@ class Gain_Plot:
                     else:
                         assert np.linalg.norm (self.geo [-1][-1] - st) < eps
                         self.geo [-1].append (en)
-                # Same for NEC and MININEC:
+                # Similar for NEC, MININEC, ASAP:
                 if line.startswith ('FREQUENCY'):
-                    f = float (line.split (':') [1].split () [0])
+                    if ':' in line:
+                        f = float (line.split (':') [1].split () [0])
+                    else:
+                        f = float (line.split () [-1])
                     delimiter = guard
                     continue
                 if line.startswith ('IMPEDANCE ='):
@@ -1047,6 +1102,12 @@ class Gain_Plot:
                     impedance = a + 1j * b
                     delimiter = guard
                     continue
+                # ASAP antenna impedance
+                if line.startswith ('THE ANTENNA IMPEDANCE IS'):
+                    re, _, im = line.split () [-3:]
+                    assert _ == '+J'
+                    impedance = float (re) + 1j * float (im)
+                    delimiter = guard
                 # NEC2 file
                 if 'ANTENNA INPUT PARAMETERS' in line:
                     status = 'antenna-input'
@@ -1086,7 +1147,12 @@ class Gain_Plot:
                         ):
                         delimiter = None
                         status = 'nec-gain'
-                    if status in ('gnn', 'mininec-gain', 'nec-gain'):
+                    elif splt == asap_p:
+                        delimiter = None
+                        status = 'asap-gain'
+                        if not f:
+                            f = 300.0
+                    if status in gain_fmt:
                         for p in 'H', 'V', 'sum':
                             if not nec_vh and p in ('H', 'V'):
                                 continue
@@ -1097,7 +1163,7 @@ class Gain_Plot:
                         impedance = None
                         continue
                 else:
-                    if not line or not line [0].isnumeric ():
+                    if not line or not line [0].isnumeric () or line == '0':
                         delimiter = guard
                         gdata = None
                         status = 'start'
@@ -1114,7 +1180,21 @@ class Gain_Plot:
                     if old_mininec:
                         zen, azi, vp, hp = (float (x) for x in fields [:4])
                         v = 10 ** (vp / 10) + 10 ** (hp / 10)
-                        tot = np.log (v) / np.log (10)
+                        tot = np.log (v) / log10
+                    elif status == 'asap-gain':
+                        zen, azi, vpl, hpl = (float (x) for x in fields [:4])
+                        if vpl <= 0:
+                            vp = -999.
+                        else:
+                            vp = np.log (vpl) / log10 * 10
+                        if hpl <= 0:
+                            hp = -999.
+                        else:
+                            hp = np.log (hpl) / log10 * 10
+                        if hpl + vpl <= 0:
+                            tot = -999.
+                        else:
+                            tot = np.log (hpl + vpl) / log10 * 10
                     else:
                         zen, azi, vp, hp, tot = (float (x) for x in fields [:5])
                     # GNN-file, mininec gain and nec gain share the format
