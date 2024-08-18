@@ -862,6 +862,7 @@ class Gain_Plot:
         status    = 'start'
         wires     = []
         impedance = None
+        z_offset  = None
         geowire   = None
         asap_p    = 'THETA PHI ' * 2 + 'REAL IMAG MAGN PHASE ' * 2
         asap_p    = asap_p.strip ()
@@ -922,6 +923,10 @@ class Gain_Plot:
                         self.has_ground = gp == 2
                 if line.startswith ('GROUND PLANE SPECIFIED'):
                     gnd = True
+                if line.startswith ('GROUND PLANE (NO/YES)'):
+                    self.has_ground = line.endswith ('YES')
+                if line.startswith ('ANTENNA HEIGHT (METERS)'):
+                    z_offset = float (line.split () [-1])
                 if line == 'ANTENNA FEEDS':
                     status = 'asap-feed'
                     continue
@@ -991,6 +996,9 @@ class Gain_Plot:
                 if status == 'asap-geo':
                     sn, n1, x1, y1, z1, n2, x2, y2, z2 = \
                         (float (x) for x in line.split ())
+                    if z_offset:
+                        z1 += z_offset
+                        z2 += z_offset
                     e1  = np.array ([x1, y1, z1])
                     e2  = np.array ([x2, y2, z2])
                     n1, n2 = (int (x) for x in (n1, n2))
