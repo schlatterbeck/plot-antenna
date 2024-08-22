@@ -226,8 +226,8 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'necfile', dict
-            (( ('3.5.2', '68fcdc634ae889d9edea1fdcbff196e16ccd8ca9')
-            ,  ('3.6.3', '36e0de54ff41c41f88530572fdcf712c77596cda')
+            (( ('3.5.2', '7e55528275f1d39992dafa84bf7d17ffb231c292')
+            ,  ('3.6.3', '52b2031fc239871a0d38edcdb3028bb0bdc2fc2c')
             ))
           )
        ,  ( 'necfile_azi_plotly', dict
@@ -246,8 +246,8 @@ picture_hashes = dict \
             ))
           )
        ,  ( 'plotall', dict
-            (( ('3.5.2', '1c858d93cb69d95e3fe608148016f084bbc046fd')
-            ,  ('3.6.3', '894b813078420b04011dcc5f273385b00dc68d46')
+            (( ('3.5.2', '6c9bdebd77a6e045a01a7b52424c3b69b6c08b44')
+            ,  ('3.6.3', '0344e593e0878f76d99a5dd9ec3c45f44757654a')
             ))
           )
        ,  ( 'smith', dict
