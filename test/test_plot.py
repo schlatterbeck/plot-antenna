@@ -444,14 +444,14 @@ class Test_Plot (unittest.TestCase):
     @check_status_matplotlib
     def test_3d (self):
         infile = "test/12-el-5deg.pout"
-        args = ["--plot3d", infile]
+        args = ["--title=", "--plot3d", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d
 
     def test_3d_plotly (self):
         infile = "test/12-el-5deg.pout"
-        args = ["--plot3d", "-S", infile]
+        args = ["--title=", "--plot3d", "-S", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_3d_plotly
@@ -467,14 +467,14 @@ class Test_Plot (unittest.TestCase):
     @check_status_matplotlib
     def test_vswr (self):
         infile = "test/inverted-v.pout"
-        args = ["--vswr", infile]
+        args = ["--title=", "--vswr", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_vswr
 
     def test_vswr_plotly (self):
         infile = "test/inverted-v.pout"
-        args = ["--vswr", "-S", infile]
+        args = ["--title=", "--vswr", "-S", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_vswr_plotly
@@ -482,7 +482,7 @@ class Test_Plot (unittest.TestCase):
     @check_status_matplotlib
     def test_vswr_extended (self):
         infile = "test/u29gbuv0.nout"
-        args = ["--vswr", "--swr-show-bands", "--swr-show-impedance"
+        args = ["--title=", "--vswr", "--swr-show-bands", "--swr-show-impedance"
                , "--system-impedance=4050", infile
                ]
         main (args, pic_io = self.pic_io)
@@ -491,7 +491,7 @@ class Test_Plot (unittest.TestCase):
 
     def test_vswr_extended_plotly (self):
         infile = "test/u29gbuv0.nout"
-        args = ["--vswr", "--swr-show-bands", "--swr-show-impedance"
+        args = ["--title=", "--vswr", "--swr-show-bands", "--swr-show-impedance"
                , "-S", "--system-impedance=4050", infile
                ]
         main (args, pic_io = self.pic_io)
@@ -555,7 +555,7 @@ class Test_Plot (unittest.TestCase):
         """ We also can parse nec2c output
         """
         infile = "test/12-el.nout"
-        args = ["--swr", "-S", infile]
+        args = ["--title=", "--swr", "-S", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_necfile_swr_plotly
@@ -579,14 +579,14 @@ class Test_Plot (unittest.TestCase):
 
     def test_geo (self):
         infile = "test/inve802B.pout"
-        args = ["--geo", infile]
+        args = ["--title=", "--geo", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_geo
 
     def test_geo_plotly (self):
         infile = "test/inve802B.pout"
-        args = ["--geo", "-S", infile]
+        args = ["--title=", "--geo", "-S", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_geo_plotly
@@ -625,21 +625,21 @@ class Test_Plot (unittest.TestCase):
 
     def test_geo_bug_plotly (self):
         infile = "test/geo-bug.nout"
-        args = ["--geo", "-S", infile]
+        args = ["--title=", "--geo", "-S", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_geo_bug_plotly
 
     def test_monopole (self):
         infile = "test/diphalf.nout"
-        args = ["--geo", infile]
+        args = ["--title=", "--geo", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_monopole
 
     def test_monopole_plotly (self):
         infile = "test/diphalf.nout"
-        args = ["--geo", "-S", infile]
+        args = ["--title=", "--geo", "-S", infile]
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_monopole_plotly

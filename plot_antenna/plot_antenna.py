@@ -765,7 +765,7 @@ class Gain_Plot:
 
     def compute (self):
         # If there is a title option it wins:
-        if self.args.title:
+        if self.args.title is not None:
             self.title = self.args.title
         self.plot_keys = []
         self.maxg = None
