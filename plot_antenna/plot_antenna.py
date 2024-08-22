@@ -1012,7 +1012,7 @@ class Gain_Plot:
                     self.segments.append (mid)
                     self.geo.append ([e1, e2])
                 if status == 'geo':
-                    if not line [0].isnumeric ():
+                    if not line [-1].isnumeric ():
                         status = 'start'
                         continue
                     x, y, z, r, e1, e2, n = line.split ()
