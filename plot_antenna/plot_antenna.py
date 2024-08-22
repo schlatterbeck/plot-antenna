@@ -286,6 +286,11 @@ class Gain_Data:
             )
     # end def do_polarization
 
+    @property
+    def maxgain (self):
+        return self.parent.maxgain
+    # end def maxgain
+
     def compute (self):
         thetas = set ()
         phis   = set ()
@@ -334,9 +339,6 @@ class Gain_Data:
         self.desc.append ('Frequency: ' + format_f (self.key [0], 2))
         self.lbl_deg   = 0
         self.labels    = None
-        self.maxgain   = self.parent.args.maxgain
-        if self.maxgain is None:
-            self.maxgain = self.maxg
     # end def compute
 
     def azimuth_gains (self, scaler):
