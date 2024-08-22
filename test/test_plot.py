@@ -215,6 +215,28 @@ picture_hashes = dict \
                )
             ))
           )
+       ,  ( 'mininec_3_ele', dict
+            (( ('3.5.2', '8b233f643d5d7df61888d615be2b3911753ed61c')
+            ,  ('3.6.3', '7dcaa697b1df4ba81ac3e17910e712f5e79072d2')
+            ))
+          )
+       ,  ( 'mininec_3_geo', dict
+            (( ('3.5.2', '6064f56e7b6b7eb2be3fb60262e90e28c9bb2f90')
+            ,  ('3.6.3', 'eceaff14bd647727b616eb65c28cfff07b6f0dec')
+            ))
+          )
+       ,  ( 'mininec_3_ele_plotly', dict
+            (( ('5.4.0',  'a8402e6c835babeee44045804ca3b52922db28b1')
+            ,  ('5.10.0', 'a8402e6c835babeee44045804ca3b52922db28b1')
+            ,  ('5.15.0', 'a8402e6c835babeee44045804ca3b52922db28b1')
+            ))
+          )
+       ,  ( 'mininec_3_geo_plotly', dict
+            (( ('5.4.0',  '97897b4d1ae3d848ec327a6e34bb27357a67ed51')
+            ,  ('5.10.0', '97897b4d1ae3d848ec327a6e34bb27357a67ed51')
+            ,  ('5.15.0', '97897b4d1ae3d848ec327a6e34bb27357a67ed51')
+            ))
+          )
        ,  ( 'monopole', dict
             (( ('3.5.2', 'faf003cb6a8c659b94a9c074428d7daa8bdd6f7f')
             ,  ('3.6.3', 'e263df49ec466597eccf32337923f3a7dbd9337b')
@@ -693,5 +715,33 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_old_mininec_geo_plotly
+
+    def test_mininec_3_ele (self):
+        infile = "test/mininec-3.bout"
+        args = ["--ele", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_mininec_3_ele
+
+    def test_mininec_3_ele_plotly (self):
+        infile = "test/mininec-3.bout"
+        args = ["-S", "--ele", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_mininec_3_ele_plotly
+
+    def test_mininec_3_geo (self):
+        infile = "test/mininec-3.bout"
+        args = ["--geo", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_mininec_3_geo
+
+    def test_mininec_3_geo_plotly (self):
+        infile = "test/mininec-3.bout"
+        args = ["-S", "--geo", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_mininec_3_geo_plotly
 
 # end class Test_Plot
