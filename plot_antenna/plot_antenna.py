@@ -1368,6 +1368,7 @@ class Gain_Plot:
             if self.save_format:
                 d.update (format = self.save_format)
             fig.savefig (self.outfile, **d)
+            plt.close ()
         else:
             plt.show ()
     # end def plot_matplotlib
