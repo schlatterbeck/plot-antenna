@@ -2315,7 +2315,6 @@ def options_gain (cmd = None):
     """ Options that have to do with displaying gains, i.e.
         plotting of azimuth/elevation or 3d
     """
-    scaling = ['arrl', 'linear', 'linear_db', 'linear_voltage']
     if cmd is None:
         cmd = SortingArgumentParser ()
     cmd.add_argument \
@@ -2393,9 +2392,9 @@ def options_gain (cmd = None):
         )
     cmd.add_argument \
         ( '--scaling-method'
-        , help    = 'Scaling method to use, default=%%(default)s, one of %s'
-                  % (', '.join (scaling))
+        , help    = 'Scaling method to use, default=%%(default)s'
         , default = 'arrl'
+        , choices = ['arrl', 'linear', 'linear_db', 'linear_voltage']
         )
     cmd.add_argument \
         ( '--scaling-mindb'
