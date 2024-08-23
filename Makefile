@@ -9,7 +9,10 @@ VERSIONPY=plot_antenna/Version.py
 VERSIONTXT=VERSION
 VERSION=$(VERSIONPY) $(VERSIONTXT)
 README=README.rst
-PROJECT=plot-antenna
+# PROJECT *needs* to be with underscore, otherwise the files in dist
+# will not be matched.
+PROJECT=plot_antenna
+PACKAGE=plot-antenna
 
 all: $(VERSION)
 
