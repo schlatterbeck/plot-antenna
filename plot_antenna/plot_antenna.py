@@ -5,6 +5,10 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
+try:
+    NaN = np.nan
+except AttributeError:
+    NaN = np.NaN
 from html import escape
 from bisect import bisect
 try:
@@ -213,7 +217,7 @@ class Plot_Range:
     # end def compute
 
     def as_plotly (self):
-        return dict (range = self.rng, dtick = self.tck)
+        return dict (range = self.rng, dtick = self.tck, tick0 = self.rng [0])
     # end def as_plotly
 
     def as_matplot (self):
@@ -318,7 +322,7 @@ class Gain_Data:
         self.thetas   = self.thetas_d * np.pi / 180
         self.phis     = self.phis_d   * np.pi / 180
 
-        gains = self.gains = np.full ((len (thetas), len (phis)), np.NaN)
+        gains = self.gains = np.full ((len (thetas), len (phis)), NaN)
         for theta, phi in sorted (self.pattern):
             tidx = td.index (theta)
             pidx = pd.index   (phi)
