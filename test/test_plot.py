@@ -309,6 +309,17 @@ picture_hashes = dict \
                )
             ))
           )
+       ,  ( 'swr_tickmarks', dict
+            (( ('3.5.2', '3c8026d526cb759571fdfbcbc2f548b9b94c6f48')
+            ,  ('3.6.3', '9c368599c81b9231bbb41af40bb6b2b874fbafa1')
+            ))
+          )
+       ,  ( 'swr_tickmarks_plotly', dict
+            (( ('5.4.0',  'c787ce20e2876f9477863c089c18e5e56a810a17')
+            ,  ('5.10.0', 'c787ce20e2876f9477863c089c18e5e56a810a17')
+            ,  ('5.15.0', '254c6d573d7c3551f9a5ddcac7b91b0b6f696c3e')
+            ))
+          )
        ,  ( 'vswr', dict
             (( ('3.5.2', '544bed7b90f16fa725bc998658de751e3b4bbc84')
             ,  ('3.6.3', '2b01bbdd71c162ace5c5ef0683a8ef8c1703ee2c')
@@ -743,5 +754,21 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_mininec_3_geo_plotly
+
+    def test_swr_tickmarks (self):
+        infile = "test/inverted-v.pout"
+        args = '--vswr --swr-show-impedance'.split ()
+        args.append (infile)
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_swr_tickmarks
+
+    def test_swr_tickmarks_plotly (self):
+        infile = "test/inverted-v.pout"
+        args = '-S --vswr --swr-show-impedance'.split ()
+        args.append (infile)
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_swr_tickmarks_plotly
 
 # end class Test_Plot
