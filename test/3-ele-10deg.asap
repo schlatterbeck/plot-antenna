@@ -1,0 +1,59 @@
+C    3 element Yagi
+C
+WIRE(RADIUS=.001)
+GXYZ
+0 	0 	-0.25	/ Driven element node 1
+0 	0 	 0	/ Driven element node 2
+0 	0 	 0.25	/ Driven element node 3
+-0.15 	0 	-0.2625	/ Reflector element node 4
+-0.15 	0 	 0	/ Reflector element node 5
+-0.15	0 	 0.2625	/ Reflector element node 6
+ 0.15 	0 	-0.2375	/ Director element node 7
+ 0.15 	0 	 0	/ Director element node 8
+ 0.15	0 	 0.2375	/ Director element node 9
+XXXX
+DNODE
+1 2
+2 3
+4 5
+5 6
+7 8
+8 9
+XXXX
+FEED(2)
+FREQ(295)
+OUTPUT(CURR)
+OUTPUT(FARF=0,360,0,180/STEP=10)
+CHANGE
+FREQ(296)
+OUTPUT(CURR)
+CHANGE
+FREQ(297)
+OUTPUT(CURR)
+CHANGE
+FREQ(298)
+OUTPUT(CURR)
+CHANGE
+FREQ(299)
+OUTPUT(CURR)
+CHANGE
+FREQ(300)
+OUTPUT(CURR)
+OUTPUT(FARF=0,360,0,180/STEP=10)
+CHANGE
+FREQ(301)
+OUTPUT(CURR)
+CHANGE
+FREQ(302)
+OUTPUT(CURR)
+CHANGE
+FREQ(303)
+OUTPUT(CURR)
+CHANGE
+FREQ(304)
+OUTPUT(CURR)
+CHANGE
+FREQ(305)
+OUTPUT(CURR)
+OUTPUT(FARF=0,360,0,180/STEP=10)
+STOP

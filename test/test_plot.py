@@ -69,6 +69,61 @@ picture_hashes = dict \
             ,  ('5.15.0', '87cc3e896eb1ab65ec84212bc057a68898e046d6')
             ))
           )
+       ,  ( 'asap_3d', dict
+            (( ('3.5.2', '1acd523a256c6a8e534150f4099c6def386e2f1e')
+            ,  ('3.6.3', '5ce38429edf8a0acec45e2fb08412ad875609120')
+            ))
+          )
+       ,  ( 'asap_azi', dict
+            (( ('3.5.2', 'cafe43d1ad73bef2d137e98bc86fda855de60fa6')
+            ,  ('3.6.3', '8a10b180a43da1faeb33b0491f8778d5b803fbef')
+            ))
+          )
+       ,  ( 'asap_ele', dict
+            (( ('3.5.2', '1acd523a256c6a8e534150f4099c6def386e2f1e')
+            ,  ('3.6.3', '5ce38429edf8a0acec45e2fb08412ad875609120')
+            ))
+          )
+       ,  ( 'asap_geo', dict
+            (( ('3.5.2', '8274017b943c0f6258bb392a7168ef2b7f061ebe')
+            ,  ('3.6.3', '5bc030ddf6607d54cbcf3d169a9973974bc5f1d7')
+            ))
+          )
+       ,  ( 'asap_swr', dict
+            (( ('3.5.2', 'd231a47380b4848f9cb87e410660440413990cf5')
+            ,  ('3.6.3', '3d4d55c23bfcc3c246cc7f97724ad154b447839f')
+            ))
+          )
+       ,  ( 'asap_3d_plotly', dict
+            (( ('5.4.0',  '92bd1d733e2a6c36e9afafa495d9838409e55383')
+            ,  ('5.10.0', '92bd1d733e2a6c36e9afafa495d9838409e55383')
+            ,  ('5.15.0', '92bd1d733e2a6c36e9afafa495d9838409e55383')
+            ))
+          )
+       ,  ( 'asap_azi_plotly', dict
+            (( ('5.4.0',  '2a1cf9d0cf3c5d5ddfab3cf4cf47dd342a00b31e')
+            ,  ('5.10.0', '2a1cf9d0cf3c5d5ddfab3cf4cf47dd342a00b31e')
+            ,  ('5.15.0', '2a1cf9d0cf3c5d5ddfab3cf4cf47dd342a00b31e')
+            ))
+          )
+       ,  ( 'asap_ele_plotly', dict
+            (( ('5.4.0',  'f5de68c359171a3988f24dc69fff3cd39e5f050a')
+            ,  ('5.10.0', 'f5de68c359171a3988f24dc69fff3cd39e5f050a')
+            ,  ('5.15.0', 'f5de68c359171a3988f24dc69fff3cd39e5f050a')
+            ))
+          )
+       ,  ( 'asap_geo_plotly', dict
+            (( ('5.4.0',  'c49fbaafcb7b77a6330d500d68cda8329f9afd03')
+            ,  ('5.10.0', 'c49fbaafcb7b77a6330d500d68cda8329f9afd03')
+            ,  ('5.15.0', 'c49fbaafcb7b77a6330d500d68cda8329f9afd03')
+            ))
+          )
+       ,  ( 'asap_swr_plotly', dict
+            (( ('5.4.0',  'b252845d3224a94cdd9a875b7fcb0dba1ec141d8')
+            ,  ('5.10.0', 'b252845d3224a94cdd9a875b7fcb0dba1ec141d8')
+            ,  ('5.15.0', 'd84a4d58d2444bb7429a570918c446ddce69c253')
+            ))
+          )
        ,  ( 'azimuth', dict
             (( ('3.5.2', '600221ff9765308069809711a779ea970de301b0')
             ,  ('3.6.3', '55f83891c3c297962e24def9d5e5d565eee58a72')
@@ -785,5 +840,75 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_swr_band_range
+
+    def test_asap_geo (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['--geo', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_geo
+
+    def test_asap_geo_plotly (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['-S', '--geo', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_geo_plotly
+
+    def test_asap_azi (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['--azi', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_azi
+
+    def test_asap_azi_plotly (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['-S', '--azi', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_azi_plotly
+
+    def test_asap_ele (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['--ele', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_ele
+
+    def test_asap_ele_plotly (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['-S', '--ele', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_ele_plotly
+
+    def test_asap_3d (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['--ele', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_3d
+
+    def test_asap_3d_plotly (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['-S', '--3d', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_3d_plotly
+
+    def test_asap_swr (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['--swr', '--swr-show-impedance', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_swr
+
+    def test_asap_swr_plotly (self):
+        infile = "test/3-ele-10deg.aout"
+        args = ['-S', '--swr', '--swr-show-impedance', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_asap_swr_plotly
 
 # end class Test_Plot
