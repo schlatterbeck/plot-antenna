@@ -31,6 +31,7 @@ from PIL import Image
 from bisect import bisect_left
 from plot_antenna.plot_antenna import main
 from plot_antenna.contrib import main_csv_measurement_data
+from plot_antenna.eznec import main_eznec
 from io import BytesIO
 import matplotlib
 import plotly
@@ -206,6 +207,39 @@ picture_hashes = dict \
                           , 'b516fa1c7e20e91c75494c1c88c5ba08e92ed15e'
                           ]
                )
+            ))
+          )
+       ,  ( 'eznec_3d', dict
+            (( ('3.5.2', '6c903634b1d27f7029e56bf48eac7c7935b1725f')
+            ,  ('3.6.3', '4d8a9bfe6a7d2697c3ec6b1aa1690f00f0cf60ad')
+            ))
+          )
+       ,  ( 'eznec_3d_plotly', dict
+            (( ('5.4.0',  '8a09e54324ca4016d7f69b2cd7d5d1f277241a08')
+            ,  ('5.10.0', '8a09e54324ca4016d7f69b2cd7d5d1f277241a08')
+            ,  ('5.15.0', '8a09e54324ca4016d7f69b2cd7d5d1f277241a08')
+            ))
+          )
+       ,  ( 'eznec_azi', dict
+            (( ('3.5.2', 'b24a1168399b7db3be11e5890eec88b067ce1796')
+            ,  ('3.6.3', '09b70587499c5c43528653275eeb10b3ac9dc7a9')
+            ))
+          )
+       ,  ( 'eznec_azi_plotly', dict
+            (( ('5.4.0',  'cb888b791bca39bf191ed7fdae57ed010c0d35da')
+            ,  ('5.10.0', 'cb888b791bca39bf191ed7fdae57ed010c0d35da')
+            ,  ('5.15.0', 'cb888b791bca39bf191ed7fdae57ed010c0d35da')
+            ))
+          )
+       ,  ( 'eznec_ele', dict
+            (( ('3.5.2', '6c903634b1d27f7029e56bf48eac7c7935b1725f')
+            ,  ('3.6.3', '4d8a9bfe6a7d2697c3ec6b1aa1690f00f0cf60ad')
+            ))
+          )
+       ,  ( 'eznec_ele_plotly', dict
+            (( ('5.4.0',  'ac7733a8dd42593def54f7b2d2689215e969e9d9')
+            ,  ('5.10.0', 'ac7733a8dd42593def54f7b2d2689215e969e9d9')
+            ,  ('5.15.0', 'ac7733a8dd42593def54f7b2d2689215e969e9d9')
             ))
           )
        ,  ( 'gainfile', dict
@@ -910,5 +944,47 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_asap_swr_plotly
+
+    def test_eznec_azi (self):
+        infile = "test/tapered.eout"
+        args = ['--azi', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_azi
+
+    def test_eznec_azi_plotly (self):
+        infile = "test/tapered.eout"
+        args = ['-S', '--azi', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_azi_plotly
+
+    def test_eznec_ele (self):
+        infile = "test/tapered.eout"
+        args = ['--ele', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_ele
+
+    def test_eznec_ele_plotly (self):
+        infile = "test/tapered.eout"
+        args = ['-S', '--ele', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_ele_plotly
+
+    def test_eznec_3d (self):
+        infile = "test/tapered.eout"
+        args = ['--ele', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_3d
+
+    def test_eznec_3d_plotly (self):
+        infile = "test/tapered.eout"
+        args = ['-S', '--3d', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_3d_plotly
 
 # end class Test_Plot
