@@ -309,6 +309,11 @@ picture_hashes = dict \
                )
             ))
           )
+       ,  ( 'swr_band_range', dict
+            (( ('3.5.2', 'c2ead006f88ba0b80e3d6db0cedb76722c784d41')
+            ,  ('3.6.3', '3015bb1ec5feb0c7ea5667c73e707b0bbcf4fdea')
+            ))
+          )
        ,  ( 'swr_tickmarks', dict
             (( ('3.5.2', '3c8026d526cb759571fdfbcbc2f548b9b94c6f48')
             ,  ('3.6.3', '9c368599c81b9231bbb41af40bb6b2b874fbafa1')
@@ -770,5 +775,15 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_swr_tickmarks_plotly
+
+    def test_swr_band_range (self):
+        """ Test limit the colored area of the band to the X plot range
+        """
+        infile = "test/inverted-v.pout"
+        args = '--vswr --swr-show-bands --swr-show-impedance'.split ()
+        args.append (infile)
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_swr_band_range
 
 # end class Test_Plot

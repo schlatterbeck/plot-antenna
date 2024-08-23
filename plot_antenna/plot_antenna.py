@@ -1836,9 +1836,12 @@ class Gain_Plot:
                 ax3.set (**pr.as_matplot ())
                 ax3.yaxis.set_major_formatter (pr.fmt (ohm))
         if self.args.swr_show_bands:
-            y1, y2 = np.array (list (ax.get_ylim ()))
+            y1, y2 = ax.get_ylim ()
+            x1, x2 = ax.get_xlim ()
             for b in self.band:
                 l, h = self.band [b]
+                l = max (l, x1)
+                h = min (h, x2)
                 ax.fill_between ([l, h], y1, y2, color = '#CCFFCC')
                 pos = ((l + h) / 2, 0.90 * max_y_r)
                 ax.annotate \
