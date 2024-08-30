@@ -815,11 +815,16 @@ class Gain_Plot:
     # end def all_gains
 
     def compute (self):
-        if not self.gdata:
-            return
+        # Borrow colormap from matplotlib to use in plotly
+        self.colormap = []
+        for cn in mcolors.TABLEAU_COLORS:
+            self.colormap.append (mcolors.TABLEAU_COLORS [cn])
+        self.c_vswr = self.colormap [0]
         # If there is a title option it wins:
         if self.args.title is not None:
             self.title = self.args.title
+        if not self.gdata:
+            return
         self.plot_keys = []
         self.maxg = None
         theta_idx = {}
@@ -903,11 +908,6 @@ class Gain_Plot:
                 (thetas, 90 - self.args.angle_elevation)
         else:
             self.theta_angle_idx = self.theta_maxidx
-        # Borrow colormap from matplotlib to use in plotly
-        self.colormap = []
-        for cn in mcolors.TABLEAU_COLORS:
-            self.colormap.append (mcolors.TABLEAU_COLORS [cn])
-        self.c_vswr = self.colormap [0]
     # end def compute
 
     def new_geo (self, gnd = False):
@@ -1331,7 +1331,7 @@ class Gain_Plot:
     # end def read_file
 
     def plot (self, key = None):
-        if key is None:
+        if key is None and self.gdata:
             key = next (iter (sorted (self.gdata)))
         self.plot_key = key
         self.cur_key  = key
@@ -1348,7 +1348,6 @@ class Gain_Plot:
 
     def plot_plotly (self, key):
         m = {}
-        self.data = self.gdata [key]
         for name in self.plot_names:
             if getattr (self.args, name, None):
                 method = getattr (self, name, None)
@@ -1361,6 +1360,9 @@ class Gain_Plot:
                         )
                 else:
                     if name in ('azimuth', 'elevation', 'plot3d'):
+                        if not key:
+                            raise ValueError ('No gain data to plot')
+                        self.data = self.gdata [key]
                         self.plotly_lastfig  = False
                         self.plotly_firstfig = True
                         if name == 'plot3d':
@@ -1447,8 +1449,9 @@ class Gain_Plot:
         self.fig = fig = plt.figure (dpi = dpi, figsize = figsize)
         fig.canvas.manager.set_window_title (self.title)
         self.axes = {}
-        self.data = self.gdata [plotkey]
         self.gui_objects = {}
+        if plotkey:
+            self.data = self.gdata [plotkey]
         for name in self.plot_names:
             if name not in a:
                 continue
@@ -1462,7 +1465,7 @@ class Gain_Plot:
                 method = getattr (self, name + '_matplotlib')
             method (name)
         # Add keypress events only when interactive
-        if not self.outfile:
+        if not self.outfile and plotkey:
             # Add keypress events '+' and '-' and some more
             fig.canvas.mpl_connect ('key_press_event', self.keypress)
             # Remove default keybindings for some keys:
@@ -1814,6 +1817,8 @@ class Gain_Plot:
     # end def plot3d_plotly
 
     def plot3d_stl (self, plotkey):
+        if not plotkey:
+            raise ValueError ('No gain data to plot')
         self.data = self.gdata [plotkey]
         t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         tri_e = []

@@ -625,4 +625,18 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_eznec_3d_plotly
 
+    def test_eznec_swr (self):
+        infile = "test/lastz.eout"
+        args = ['--vswr', '--swr-show-imp', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_swr
+
+    def test_eznec_swr_plotly (self):
+        infile = "test/lastz.eout"
+        args = ['-S', '--vswr', '--swr-show-imp', infile]
+        main_eznec (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_eznec_swr_plotly
+
 # end class Test_Plot

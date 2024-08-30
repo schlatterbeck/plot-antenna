@@ -3,6 +3,7 @@
 import sys
 from csv import DictReader
 from . import plot_antenna as aplot
+from .plot_antenna import Impedance_Data
 
 def parse_eznec_data (args):
     """ Parses eznec date exported with 'FF Tab'
@@ -15,12 +16,13 @@ def parse_eznec_data (args):
     state      = 'start'
     head_seen  = False
     gdata_dict = {}
+    impedance  = None
     with open (args.filename, 'r') as rfile:
         for line in rfile:
             line = line.strip ()
             if state == 'start':
-                line = line.replace (',', '.')
                 if line.startswith ('Frequency'):
+                    line = line.replace (',', '.')
                     if not line.endswith ('MHz'):
                         raise ValueError \
                             ('Unsupported frequency format: %s' % line)
@@ -43,7 +45,12 @@ def parse_eznec_data (args):
                         angle += 90
                     head_seen = False
                     continue
+                if line.startswith ('"Freq MHz","Src #","R","X"'):
+                    state = 'impedance'
+                    impedance = {}
+                    continue
             if state in ('azi', 'ele'):
+                line = line.replace (',', '.')
                 if not head_seen:
                     l = ' '.join (line.split ())
                     if l != 'Deg V dB H dB Tot dB V Pha H Pha':
@@ -78,21 +85,38 @@ def parse_eznec_data (args):
                         azi = angle
                     #print (ele, azi, pol, gain)
                     gdata.pattern [(ele, azi)] = gain
-    return gdata_dict
-# end def parse_csv_measurement_data
+                continue
+            if state == 'impedance':
+                f,src,r,x,swr1,swr2 = (float (x) for x in line.split (','))
+                z = r + 1j * x
+                impedance [f] = Impedance_Data (f, z)
+    return gdata_dict, impedance
+# end def parse_eznec_data
 
 def main_eznec (argv = sys.argv [1:], pic_io = None):
     """ Parse eznec far field data.
     """
     cmd = aplot.options_general ()
     aplot.options_gain (cmd)
+    aplot.options_swr  (cmd)
     cmd.add_argument ('filename', help = 'EZNEC far field data to plot')
     args = aplot.process_args (cmd, argv)
     if pic_io is not None:
         args.output_file = pic_io
         args.save_format = 'png'
-    gdata = parse_eznec_data (args)
+    gdata, idata = parse_eznec_data (args)
+    if idata and not args.plot_vswr:
+        args.plot_vswr = True
+    if gdata and not args.elevation and not args.azimuth and not args.plot3d:
+        args.plot3d = True
+    if not gdata:
+        args.plot3d    = False
+        args.elevation = False
+        args.azimuth   = False
+    if not idata:
+        args.plot_vswr = False
     gp = aplot.Gain_Plot (args, gdata)
+    gp.idata = idata
     gp.compute ()
     gp.plot ()
 # end def main_eznec
