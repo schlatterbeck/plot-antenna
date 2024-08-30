@@ -461,6 +461,55 @@ class Gain_Data:
 
 # end class Gain_Data
 
+class Geo_Data:
+
+    def __init__ (self, has_ground = None):
+        self.entries    = []
+        self.wires      = []
+        self.has_ground = has_ground
+    # end def __init__
+
+    def __bool__ (self):
+        """ Always True, we compare with None etc.
+        """
+        return True
+    # end def __bool__
+
+    def __len__ (self):
+        return len (self.entries)
+    # end def __len__
+
+    def __getitem__ (self, idx):
+        return self.entries [idx]
+    # end def __getitem__
+
+    def __setitem__ (self, idx, value):
+        self.entries [idx] = value
+    # end def __setitem__
+
+    def append (self, item):
+        self.entries.append (item)
+    # end def append
+
+    def fix_wires (self):
+        for w, g in zip (self.wires, self.entries):
+            if not g or w [0] != g [0]:
+                g.insert (0, w [0])
+            if w [-1] != g [-1]:
+                g.append (w [-1])
+    # end def fix_wires
+
+# end class Geo_Data
+
+class Impedance_Data:
+
+    def __init__ (self, frequency, impedance):
+        self.frequency = frequency
+        self.impedance = impedance
+    # end def __init__
+
+# end class Impedance_Data
+
 def nearest_angle_idx (angles, dst_angle):
     """ Compute index of angle nearest to dst_angle in angles.
         The sequence angles is sorted.
@@ -517,8 +566,6 @@ class Gain_Plot:
 
     def __init__ \
         ( self, args, gdata
-        , geo         = None
-        , has_ground  = False
         , loaded_segs = None
         ):
         self.args        = args
@@ -543,10 +590,10 @@ class Gain_Plot:
             gd = self.gdata [key]
             assert gd.parent is None
             gd.parent = self
-        self.geo          = geo or []
+        self.geo          = {}
+        self.idata        = {}
         self.seg_by_tag   = {}
         self.segments     = []
-        self.has_ground   = has_ground
         self.loaded_segs  = loaded_segs or {}
         self.frq_keys     = set ()
         self.pol_keys     = set ()
@@ -768,6 +815,8 @@ class Gain_Plot:
     # end def all_gains
 
     def compute (self):
+        if not self.gdata:
+            return
         # If there is a title option it wins:
         if self.args.title is not None:
             self.title = self.args.title
@@ -861,15 +910,25 @@ class Gain_Plot:
         self.c_vswr = self.colormap [0]
     # end def compute
 
+    def new_geo (self, gnd = False):
+        if not self.geo:
+            k = 0
+        else:
+            k = max (self.geo) + 1
+        self.geo [k] = Geo_Data (has_ground = gnd)
+        return self.geo [k]
+    # end def new_geo
+
     def read_file (self, filename):
         guard     = 'not set'
         delimiter = guard
         gdata     = None
+        idata     = None
         status    = 'start'
-        wires     = []
         impedance = None
         z_offset  = None
         geowire   = None
+        geo       = None
         asap_p    = 'THETA PHI ' * 2 + 'REAL IMAG MAGN PHASE ' * 2
         asap_p    = asap_p.strip ()
         gain_fmt  = ('gnn', 'mininec-gain', 'nec-gain', 'asap-gain')
@@ -880,38 +939,53 @@ class Gain_Plot:
         # We fill in the polarization only if we see VERTC/HORIZ
         nec_vh    = True
         gnd       = False
+        has_gnd   = None
         with open (filename, 'r') as fp:
             for line in fp:
                 line = line.strip ()
                 splt = ' '.join (line.split ())
-                if  (   line.startswith ('X             Y             Z')
-                    and line.endswith ('END1 END2  NO.')
-                    ):
+                if splt == 'X Y Z RADIUS END1 END2 NO.':
                     status  = 'geo'
                     geowire = None
-                    self.geo.append ([])
+                    if geo is None:
+                        # Only one geo in mininec, continued
+                        if self.geo:
+                            gidx = max (self.geo)
+                            geo = self.geo [gidx]
+                        else:
+                            geo = self.new_geo (has_gnd)
+                    geo.append ([])
                     continue
-                if  (   line.startswith ('X             Y             Z')
-                    and line.endswith ('SEGMENTS')
-                    ):
+                if splt == 'X Y Z RADIUS CONNECTION SEGMENTS':
                     status = 'wire'
-                    wires.append ([])
+                    if geo is None:
+                        if self.geo:
+                            gidx = max (self.geo)
+                            geo = self.geo [gidx]
+                        else:
+                            geo = self.new_geo (has_gnd)
+                    geo.wires.append ([])
                     continue
                 if  (  line.startswith ('END ONE COORDINATES')
                     or line.startswith ('END TWO COORDINATES')
                     ):
+                    if not geo:
+                        geo = self.new_geo (has_gnd)
                     if 'TWO' not in line:
-                        wires.append ([])
+                        geo.wires.append ([])
                     r = line.split (':', 1)[-1].strip ()
-                    wires [-1].append ([float (x) for x in r.split (',')])
+                    geo.wires [-1].append ([float (x) for x in r.split (',')])
                 if  (   splt.startswith ('No: X Y Z')
                     and splt.endswith ('I- I I+ No:')
                     ):
                     status = 'necgeo'
+                    assert not geo
+                    geo = self.new_geo (has_gnd)
                     necidx = {}
                     continue
                 if splt == 'NO. NO. X Y Z NO. X Y Z':
                     status = 'asap-geo'
+                    geo = self.new_geo (has_gnd)
                     continue
                 if line.startswith ('NO. OF SOURCES'):
                     status = 'source'
@@ -924,15 +998,30 @@ class Gain_Plot:
                     continue
                 if line.startswith ('ENVIRONMENT'):
                     gp = int (line.split (':', 1) [-1])
-                    self.has_ground = gp < 0
-                    if not self.has_ground and '2-GROUND' in line:
-                        self.has_ground = gp == 2
+                    has_gnd = gp < 0
+                    if not has_gnd and '2-GROUND' in line:
+                        has_gnd = gp == 2
+                    if geo:
+                        geo.has_ground = True
+                        has_gnd = None
+                    elif self.geo:
+                        gidx = max (self.geo)
+                        if self.geo [gidx].has_ground is None:
+                            self.geo [gidx].has_ground = has_gnd
+                            has_gnd = None
+                    continue
                 if line.startswith ('GROUND PLANE SPECIFIED'):
                     gnd = True
+                    continue
                 if line.startswith ('GROUND PLANE (NO/YES)'):
-                    self.has_ground = line.endswith ('YES')
+                    has_gnd = line.endswith ('YES')
+                    if geo:
+                        geo.has_ground = True
+                        has_gnd = None
+                    continue
                 if line.startswith ('ANTENNA HEIGHT (METERS)'):
                     z_offset = float (line.split () [-1])
+                    continue
                 if line == 'ANTENNA FEEDS':
                     status = 'asap-feed'
                     continue
@@ -970,9 +1059,15 @@ class Gain_Plot:
                     if ll [4] == 'GN':
                         typ = int (ll [5])
                         if typ >= 0:
-                            self.has_ground = True
+                            if self.geo:
+                                gidx = max (self.geo)
+                                if self.geo [gidx].has_ground is None:
+                                    self.geo [gidx].has_ground = True
+                    continue
                 if status != 'start' and not line:
                     status  = 'start'
+                    geo     = None
+                    has_gnd = None
                     continue
                 if status == 'asap-feed':
                     if splt == 'NODE VOLTS':
@@ -984,6 +1079,7 @@ class Gain_Plot:
                     tag  = int (n)
                     Loaded_Segment \
                         (self.loaded_segs, self.seg_by_tag [tag], name)
+                    continue
                 if status == 'asap-load':
                     if splt == 'SEGMENT OHMS':
                         status = 'start'
@@ -999,6 +1095,7 @@ class Gain_Plot:
                     tag  = int (n)
                     Loaded_Segment \
                         (self.loaded_segs, self.seg_by_tag [tag], name)
+                    continue
                 if status == 'asap-geo':
                     sn, n1, x1, y1, z1, n2, x2, y2, z2 = \
                         (float (x) for x in line.split ())
@@ -1014,10 +1111,13 @@ class Gain_Plot:
                     if n2 not in self.seg_by_tag:
                         self.seg_by_tag [n2] = e2
                     self.segments.append (mid)
-                    self.geo.append ([e1, e2])
+                    geo.append ([e1, e2])
+                    continue
                 if status == 'geo':
                     if not line [-1].isnumeric ():
-                        status = 'start'
+                        status  = 'start'
+                        geo     = None
+                        has_gnd = None
                         continue
                     x, y, z, r, e1, e2, n = line.split ()
                     n = int (n)
@@ -1027,10 +1127,13 @@ class Gain_Plot:
                     else:
                         e1, e2 = (abs (int (x)) for x in (e1, e2))
                         if geowire is not None and max (e1, e2) > geowire:
-                            self.geo.append ([])
+                            if not geo:
+                                geo = self.new_geo (has_gnd)
+                            geo.append ([])
                         geowire = max (e1, e2)
                         self.seg_by_tag [n] = np.array ([x, y, z])
-                        self.geo [-1].append ([float (a) for a in (x, y, z)])
+                        assert geo is not None
+                        geo [-1].append ([float (a) for a in (x, y, z)])
                     continue
                 if status == 'load':
                     if line.startswith ('PULSE'):
@@ -1042,6 +1145,7 @@ class Gain_Plot:
                             name = 'Impedance'
                         Loaded_Segment \
                             (self.loaded_segs, self.seg_by_tag [tag], name)
+                        continue
                 if status == 'source':
                     if line.startswith ('PULSE'):
                         l = line.split (':')[1]
@@ -1050,9 +1154,10 @@ class Gain_Plot:
                         name = 'Excitation'
                         Loaded_Segment \
                             (self.loaded_segs, self.seg_by_tag [tag], name)
+                        continue
                 if status == 'wire':
                     l = line.split ()
-                    wires [-1].append ([float (a) for a in l [:3]])
+                    geo.wires [-1].append ([float (a) for a in l [:3]])
                     continue
                 if status == 'necgeo':
                     # Fixme: This should really be lambda-dependent
@@ -1071,19 +1176,20 @@ class Gain_Plot:
                     assert cur == idx
                     aprev = abs (prev)
                     if prev == 0 or aprev > idx:
-                        self.geo.append ([])
+                        geo.append ([])
                         started = True
                     elif aprev != idx - 1 and aprev != idx:
-                        self.geo.append ([])
+                        geo.append ([])
                         a, b = necidx [aprev]
                         if prev > 0:
                             b += 1
-                        self.geo [-1].append (self.geo [a][b])
+                        geo [-1].append (self.geo [a][b])
                         started = True
                     elif prev == cur and gnd:
-                        self.geo.append ([])
+                        geo.append ([])
                         started = True
-                    necidx [idx] = (len (self.geo) - 1, len (self.geo [-1]) - 1)
+                        gnd = None
+                    necidx [idx] = (len (geo) - 1, len (geo [-1]) - 1)
                     alpha = alpha / 180 * np.pi
                     beta  = beta  / 180 * np.pi
                     cos_t = np.cos (alpha)
@@ -1097,11 +1203,12 @@ class Gain_Plot:
                     # endpoint   is midpoint + uvec * (l / 2)
                     en = mid + uvec * (l / 2)
                     if started:
-                        self.geo [-1].append (st)
-                        self.geo [-1].append (en)
+                        geo [-1].append (st)
+                        geo [-1].append (en)
                     else:
-                        assert np.linalg.norm (self.geo [-1][-1] - st) < eps
-                        self.geo [-1].append (en)
+                        assert np.linalg.norm (geo [-1][-1] - st) < eps
+                        geo [-1].append (en)
+                    continue
                 # Similar for NEC, MININEC, ASAP:
                 if line.startswith ('FREQUENCY'):
                     if ':' in line:
@@ -1114,6 +1221,7 @@ class Gain_Plot:
                     m = line.split ('(', 1)[1].split (')')[0].rstrip ('J')
                     a, b = (float (x) for x in m.split (','))
                     impedance = a + 1j * b
+                    idata = self.idata [f] = Impedance_Data (f, impedance)
                     delimiter = guard
                     continue
                 # ASAP antenna impedance
@@ -1121,7 +1229,9 @@ class Gain_Plot:
                     re, _, im = line.split () [-3:]
                     assert _ == '+J'
                     impedance = float (re) + 1j * float (im)
+                    idata = self.idata [f] = Impedance_Data (f, impedance)
                     delimiter = guard
+                    continue
                 # NEC2 file
                 if 'ANTENNA INPUT PARAMETERS' in line:
                     status = 'antenna-input'
@@ -1132,6 +1242,7 @@ class Gain_Plot:
                     assert len (l) == 11
                     a, b = (float (x) for x in l [6:8])
                     impedance = a + 1j * b
+                    idata  = self.idata [f] = Impedance_Data (f, impedance)
                     status = 'start'
                     continue
                 # File might end with Ctrl-Z (DOS EOF)
@@ -1172,9 +1283,6 @@ class Gain_Plot:
                                 continue
                             k = (f, p)
                             gdata = self.gdata [k] = Gain_Data (k, self)
-                            if impedance is not None:
-                                gdata.impedance = impedance
-                        impedance = None
                         continue
                 else:
                     if not line or not line [0].isnumeric () or line == '0':
@@ -1218,11 +1326,8 @@ class Gain_Plot:
                             continue
                         gdata = self.gdata [(f, p)]
                         gdata.pattern [(zen, azi)] = v
-        for w, g in zip (wires, self.geo):
-            if not g or w [0] != g [0]:
-                g.insert (0, w [0])
-            if w [-1] != g [-1]:
-                g.append (w [-1])
+        for g in self.geo.values ():
+            g.fix_wires ()
     # end def read_file
 
     def plot (self, key = None):
@@ -1747,15 +1852,15 @@ class Gain_Plot:
         real = []
         xabs = []
         xphi = []
-        for key in self.gdata:
-            gd  = self.gdata [key]
-            z   = gd.impedance
+        for key in self.idata:
+            idt = self.idata [key]
+            z   = idt.impedance
             rho = np.abs ((z - z0) / (z + z0))
             imag.append (z.imag)
             real.append (z.real)
             xabs.append (np.abs   (z))
             xphi.append (np.angle (z) * 180 / np.pi)
-            X.append (key [0])
+            X.append (idt.frequency)
             Y.append ((1 + rho) / (1 - rho))
             Z.append (z)
         min_idx = np.argmin (Y)
@@ -1955,7 +2060,7 @@ class Gain_Plot:
         max_y = y.max ()
         min_z = z.min ()
         max_z = z.max ()
-        if add_ground and self.has_ground and min_z > 0:
+        if add_ground and min_z > 0:
             min_z = 0
         max_range = np.array \
             ([ max_x - min_x, max_y - min_y, max_z - min_z ]).max() / 2.0
@@ -1978,18 +2083,20 @@ class Gain_Plot:
             zr [0] = min_z
         if zr [1] < max_z:
             zr [1] = max_z
-        if add_ground and self.has_ground and min_z == 0:
+        if add_ground and min_z == 0:
             zr = np.array ([min_z, min_z + 2 * max_range])
         return np.array ([xr, yr, zr])
     # end def scene_ranges
 
     def plot_geo_plotly (self, name):
-        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T, True)
+        gidx = min (self.geo)
+        xr, yr, zr = self.scene_ranges \
+            (np.concatenate (self.geo [gidx]).T, self.geo [gidx].has_ground)
         fig = px.line_3d ()
         fig.update (self.plotly_3d_default)
         fig.layout.title.text = self.title
-        geo = []
-        for n, g in enumerate (self.geo):
+        geo  = []
+        for n, g in enumerate (self.geo [gidx]):
             if geo:
                 geo.append ([np.nan, np.nan, np.nan])
             geo.extend (g)
@@ -2016,7 +2123,7 @@ class Gain_Plot:
                 , zaxis = dict (range = zr)
                 )
             )
-        if self.has_ground:
+        if self.geo [gidx].has_ground:
             x, y = np.meshgrid (xr, yr)
             z = np.zeros (x.shape)
             d = dict (showscale = False, colorscale = ['#6cbe6c'] * 2)
@@ -2029,7 +2136,9 @@ class Gain_Plot:
     def plot_geo_matplotlib (self, name):
         ax = self.axes [name]
         # equal aspect ratio
-        xr, yr, zr = self.scene_ranges (np.concatenate (self.geo).T, True)
+        gidx = min (self.geo)
+        xr, yr, zr = self.scene_ranges \
+            (np.concatenate (self.geo [gidx]).T, self.geo [gidx].has_ground)
         ax.set_xlim (*xr)
         ax.set_ylim (*yr)
         ax.set_zlim (*zr)
@@ -2037,7 +2146,7 @@ class Gain_Plot:
         ax.set_ylabel ('Y')
         ax.set_zlabel ('Z')
         ax.set_title  (self.title)
-        for g in self.geo:
+        for g in self.geo [gidx]:
             g = np.array (g)
             x, y, z = g.T
             d = dict (color = self.colormap [0], linewidth = 3)
@@ -2051,7 +2160,7 @@ class Gain_Plot:
             x, y, z = coord.T
             d = dict (color = self.colormap [i + 1], marker = 'o')
             ax.scatter (x, y, z, **d)
-        if self.has_ground:
+        if self.geo [gidx].has_ground:
             x, y = np.meshgrid (xr, yr)
             z = np.zeros (x.shape)
             d = dict (color = '#6cbe6c', alpha = 0.9)
