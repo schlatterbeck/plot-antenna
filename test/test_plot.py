@@ -269,18 +269,21 @@ class Test_Plot (unittest.TestCase):
     @check_status_matplotlib
     def test_vswr_extended (self):
         infile = "test/u29gbuv0.nout"
-        args = ["--title=", "--vswr", "--swr-show-bands", "--swr-show-impedance"
-               , "--system-impedance=4050", infile
-               ]
+        args = '''--title= --vswr --swr-show-bands --swr-show-imp
+                  --system-impedance=4050 --width=1000'''
+        args = args.split ()
+        args.append (infile)
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_vswr_extended
 
     def test_vswr_extended_plotly (self):
         infile = "test/u29gbuv0.nout"
-        args = ["--title=", "--vswr", "--swr-show-bands", "--swr-show-impedance"
-               , "-S", "--system-impedance=4050", infile
-               ]
+        args = '''-S --title= --vswr --swr-show-bands --swr-show-imp
+                  --system-impedance=4050 --width=1000
+                  --axis-3-pos=1 --legend-x=1.07'''
+        args = args.split ()
+        args.append (infile)
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_vswr_extended_plotly
@@ -497,7 +500,8 @@ class Test_Plot (unittest.TestCase):
 
     def test_swr_tickmarks_plotly (self):
         infile = "test/inverted-v.pout"
-        args = '-S --vswr --swr-show-impedance'.split ()
+        args = '-S --vswr --swr-show-impedance --width=1000 --height=500'
+        args = args.split ()
         args.append (infile)
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
@@ -578,7 +582,8 @@ class Test_Plot (unittest.TestCase):
 
     def test_asap_swr_plotly (self):
         infile = "test/3-ele-10deg.aout"
-        args = ['-S', '--swr', '--swr-show-impedance', infile]
+        args = '-S --swr --swr-show-imp --width=1000 --legend-x=1.04'.split ()
+        args.append (infile)
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_asap_swr_plotly
@@ -634,7 +639,9 @@ class Test_Plot (unittest.TestCase):
 
     def test_eznec_swr_plotly (self):
         infile = "test/lastz.eout"
-        args = ['-S', '--vswr', '--swr-show-imp', infile]
+        args = '''-S --vswr --swr-show-imp --width=1000 --height=500
+                  --legend-x=1.04 --axis-3-pos=.99'''.split ()
+        args.append (infile)
         main_eznec (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_eznec_swr_plotly

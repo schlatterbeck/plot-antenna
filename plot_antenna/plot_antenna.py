@@ -663,8 +663,15 @@ class Gain_Plot:
                         , color  = "#010101"
                         )
                     )
+                , legend = {}
                 )
             )
+        if self.args.width:
+            d ['layout'].update (width = self.args.width)
+        if self.args.height:
+            d ['layout'].update (height = self.args.height)
+        if self.args.legend_x:
+            d ['layout']['legend'].update (x = self.args.legend_x)
         return d
     # end def plotly_polar_default
 
@@ -729,8 +736,15 @@ class Gain_Plot:
                         , size   = 24
                         )
                     )
+                , legend = {}
                 )
             )
+        if self.args.width:
+            d ['layout'].update (width = self.args.width)
+        if self.args.height:
+            d ['layout'].update (height = self.args.height)
+        if self.args.legend_x:
+            d ['layout']['legend'].update (x = self.args.legend_x)
         return d
     # end def plotly_line_default
 
@@ -781,8 +795,15 @@ class Gain_Plot:
                         )
                     , y = 0.99
                     )
+                , legend = {}
                 )
             )
+        if self.args.width:
+            d ['layout'].update (width = self.args.width)
+        if self.args.height:
+            d ['layout'].update (height = self.args.height)
+        if self.args.legend_x:
+            d ['layout']['legend'].update (x = self.args.legend_x)
         return d
     # end def plotly_3d_default
 
@@ -797,8 +818,15 @@ class Gain_Plot:
                         , size   = 20
                         )
                     )
+                , legend = {}
                 )
             )
+        if self.args.width:
+            d ['layout'].update (width = self.args.width)
+        if self.args.height:
+            d ['layout'].update (height = self.args.height)
+        if self.args.legend_x:
+            d ['layout']['legend'].update (x = self.args.legend_x)
         return d
     # end def plotly_smith_default
 
@@ -2372,6 +2400,18 @@ def options_general (cmd = None):
         , default = 80
         )
     cmd.add_argument \
+        ( '--width'
+        , help    = 'Width of the plot in pixels, default = 512 for'
+                    ' matplotlib, 700 for plotly'
+        , type    = int
+        )
+    cmd.add_argument \
+        ( '--height'
+        , help    = 'Height of the plot in pixels, default = 384 for'
+                    ' matplotlib, 500 for plotly'
+        , type    = int
+        )
+    cmd.add_argument \
         ( '--title'
         , help    = 'Title for plot, overrides filename or '
                     'information in parsed file'
@@ -2402,6 +2442,12 @@ def options_general (cmd = None):
                         "'directory', this needs the plotly.min.js in the "
                         "same directory as the output. See plotly docs for "
                         "details."
+            )
+        cmd.add_argument \
+            ( '--legend-x'
+            , help    = 'Plotly x-position of legend, default=%(default)s'
+            , type    = float
+            , default = 1.02
             )
         cmd.add_argument \
             ( "--save-format"
@@ -2558,7 +2604,7 @@ def options_swr (cmd = None):
         cmd = SortingArgumentParser ()
     cmd.add_argument \
         ( '--axis-3-position'
-        , help    = 'Position of the 3rd y-axis relative to the plot'
+        , help    = 'Plotly position of the 3rd y-axis relative to the plot'
         , type    = float
         , default = 0.98
         )
