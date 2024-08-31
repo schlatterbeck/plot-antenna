@@ -551,8 +551,6 @@ class Loaded_Segment:
 # end class Loaded_Segment
 
 class Gain_Plot:
-    fig_x = 512
-    fig_y = 384
     plot_names   = \
         ( 'azimuth', 'elevation'
         , 'plot_vswr', 'plot3d', 'plot_geo', 'plot_smith'
@@ -570,6 +568,9 @@ class Gain_Plot:
         ):
         self.args        = args
         self.dpi         = args.dpi
+        # fix_x and fig_y are used for matplotlib only
+        self.fig_x       = args.width  or 512
+        self.fig_y       = args.height or 384
         self.filename    = args.filename
         self.outfile     = args.output_file
         self.save_format = getattr (args, 'save_format', None)

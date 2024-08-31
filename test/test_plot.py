@@ -270,7 +270,7 @@ class Test_Plot (unittest.TestCase):
     def test_vswr_extended (self):
         infile = "test/u29gbuv0.nout"
         args = '''--title= --vswr --swr-show-bands --swr-show-imp
-                  --system-impedance=4050 --width=1000'''
+                  --system-impedance=4050 --width=700 --height=400'''
         args = args.split ()
         args.append (infile)
         main (args, pic_io = self.pic_io)
