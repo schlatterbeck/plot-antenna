@@ -714,7 +714,7 @@ class Gain_Plot:
                     , title       = {}
                     , overlaying  = "y"
                     , side        = "right"
-                    , position    = 0.96
+                    , position    = self.args.axis_3_position
                     , anchor      = "free"
                     , hoverformat = '.1f'
                     , zeroline    = False
@@ -2556,6 +2556,12 @@ def options_stl (cmd = None):
 def options_swr (cmd = None):
     if cmd is None:
         cmd = SortingArgumentParser ()
+    cmd.add_argument \
+        ( '--axis-3-position'
+        , help    = 'Position of the 3rd y-axis relative to the plot'
+        , type    = float
+        , default = 0.98
+        )
     cmd.add_argument \
         ( '--band'
         , help    = 'Band to highlight in VSWR plot, default are ham'
