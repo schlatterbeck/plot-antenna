@@ -269,6 +269,10 @@ class Gain_Data:
         self.pattern  = {}
     # end def __init__
 
+    def __len__ (self):
+        return len (self.pattern)
+    # end def __len__
+
     @property
     def do_polarization (self):
         """ This is implemented as a property because it can't be
@@ -586,7 +590,8 @@ class Gain_Plot:
 
         # Default title from filename
         self.title = os.path.splitext (os.path.basename (args.filename)) [0]
-        self.gdata = gdata
+        self.gdata = [g for g in gdata if len (g) > 1]
+        self.gdata = dict ((g, gdata [g]) for g in gdata if len (gdata [g]) > 1)
         for key in self.gdata:
             gd = self.gdata [key]
             assert gd.parent is None
@@ -1362,6 +1367,9 @@ class Gain_Plot:
                         gdata.pattern [(zen, azi)] = v
         for g in self.geo.values ():
             g.fix_wires ()
+        # Weed out gdata that is too small to plot
+        gdata = self.gdata
+        self.gdata = dict ((g, gdata [g]) for g in gdata if len (gdata [g]) > 1)
     # end def read_file
 
     def plot (self, key = None):
@@ -1520,6 +1528,8 @@ class Gain_Plot:
     # end def plot_matplotlib
 
     def azimuth (self, name):
+        if not getattr (self, 'data', None):
+            raise ValueError ('No gain data to plot')
         self.desc = self.data.azimuth_text (self.scaler)
         self.lbl_deg = self.data.phis_d [self.phi_angle_idx]
         self.labels  = 'XY'
@@ -1554,6 +1564,8 @@ class Gain_Plot:
             self.polargains = gains2
             But second half must (both) be flipped to avoid crossover
         """
+        if not getattr (self, 'data', None):
+            raise ValueError ('No gain data to plot')
         self.desc = self.data.elevation_text (self.scaler)
         self.lbl_deg  = 90 - self.data.thetas_d [self.theta_angle_idx]
         self.labels   = None
@@ -1718,6 +1730,8 @@ class Gain_Plot:
     # end def polarplot_matplotlib
 
     def plot3d_matplotlib (self, name):
+        if not getattr (self, 'data', None):
+            raise ValueError ('No gain data to plot')
         if name in self.gui_objects and self.gui_objects [name]:
             self.gui_objects [name]['data'].remove ()
             self.gui_objects [name] = {}
@@ -2757,7 +2771,10 @@ def main (argv = sys.argv [1:], pic_io = None):
         all_but_3d = sum (bool (getattr (args, p)) for p in all_but_3d)
         if all_but_3d:
             print ('Warning: Output as-stl only supports 3D plot')
-    gp.plot ()
+    try:
+        gp.plot ()
+    except ValueError as err:
+        print ('Error: %s' % err)
 # end def main
 
 if __name__ == '__main__':
