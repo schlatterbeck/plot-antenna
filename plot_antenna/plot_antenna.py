@@ -1167,10 +1167,15 @@ class Gain_Plot:
                 if status == 'load':
                     if line.startswith ('PULSE'):
                         txt, l = line.split (':', 1)
-                        tag, r, x = l.split (',')
+                        if 'S-PARA' in line:
+                            tag, r = l.split (',')
+                        else:
+                            tag, r, _ = l.split (',')
                         tag = int (tag)
                         name = txt.split (',', 1) [-1]
                         if name == 'RESISTANCE,REACTANCE':
+                            name = 'Impedance'
+                        if 'S-PARA' in name:
                             name = 'Impedance'
                         Loaded_Segment \
                             (self.loaded_segs, self.seg_by_tag [tag], name)

@@ -381,6 +381,20 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_geo_plotly
 
+    def test_geo_s_para (self):
+        infile = "test/inve802B_S.pout"
+        args = ["--title=", "--geo", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo_s_para
+
+    def test_geo_s_para_plotly (self):
+        infile = "test/inve802B_S.pout"
+        args = ["--title=", "--geo", "-S", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo_s_para_plotly
+
     def test_measurement (self):
         infile = "test/Messdaten.csv"
         args = ["--azi", "--polari=H", infile]
