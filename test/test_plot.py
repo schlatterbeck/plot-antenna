@@ -660,4 +660,13 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_eznec_swr_plotly
 
+    def test_nec_geo_inv_v (self):
+        """ This tests a case where we had a parsing error in geo
+        """
+        infile = "test/inverted-v-thin.nout"
+        args = ['--ele', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_nec_geo_inv_v
+
 # end class Test_Plot

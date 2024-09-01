@@ -1222,7 +1222,7 @@ class Gain_Plot:
                         a, b = necidx [aprev]
                         if prev > 0:
                             b += 1
-                        geo [-1].append (self.geo [a][b])
+                        geo [-1].append (geo [a][b])
                         started = True
                     elif prev == cur and gnd:
                         geo.append ([])
