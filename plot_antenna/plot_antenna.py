@@ -972,6 +972,8 @@ class Gain_Plot:
         # Depending on the 'X' of the 'XNDA' field of the RP card
         # We fill in the polarization only if we see VERTC/HORIZ
         nec_vh    = True
+        # 4nec2 has special format of theta, counts from down to up
+        is_4n     = False
         gnd       = False
         has_gnd   = None
         with open (filename, 'r') as fp:
@@ -1009,8 +1011,12 @@ class Gain_Plot:
                         geo.wires.append ([])
                     r = line.split (':', 1)[-1].strip ()
                     geo.wires [-1].append ([float (x) for x in r.split (',')])
-                if  (   splt.startswith ('No: X Y Z')
-                    and splt.endswith ('I- I I+ No:')
+                if  (   (  splt.startswith ('No: X Y Z')
+                        or splt.startswith ('NO. X Y Z')
+                        )
+                    and (  splt.endswith ('I- I I+ No:')
+                        or splt.endswith ('I- I I+ NO.')
+                        )
                     ):
                     status = 'necgeo'
                     assert not geo
@@ -1062,10 +1068,15 @@ class Gain_Plot:
                 if line == 'STRUCTURE LOADS':
                     status = 'asap-load'
                     continue
-                if line.startswith ('DATA CARD No:'):
+                if  (  line.startswith ('DATA CARD No:')
+                    or line.startswith ('***** DATA CARD NO.')
+                    ):
+                    off = 0
+                    if line.startswith ('*****'):
+                        off = 1
                     ll = line.split ()
-                    if ll [4] == 'EX':
-                        typ, tag, n = (int (x) for x in ll [5:8])
+                    if ll [4+off] == 'EX':
+                        typ, tag, n = (int (x) for x in ll [5+off:8+off])
                         if typ in (0, 5):
                             assert n >= 1
                             name  = 'Excitation'
@@ -1074,8 +1085,8 @@ class Gain_Plot:
                             else:
                                 seg = self.seg_by_tag [tag][n - 1]
                             Loaded_Segment (self.loaded_segs, seg, name)
-                    if ll [4] == 'LD':
-                        typ, tag, m, n = (int (x) for x in ll [5:9])
+                    if ll [4+off] == 'LD':
+                        typ, tag, m, n = (int (x) for x in ll [5+off:9+off])
                         name = Loaded_Segment.nec_types [typ]
                         if tag == 0:
                             segs = self.segments
@@ -1090,8 +1101,8 @@ class Gain_Plot:
                             for i in range (n - 1, m):
                                 Loaded_Segment \
                                     (self.loaded_segs, segs [i], name)
-                    if ll [4] == 'GN':
-                        typ = int (ll [5])
+                    if ll [4+off] == 'GN':
+                        typ = int (ll [5+off])
                         if typ >= 0:
                             if self.geo:
                                 gidx = max (self.geo)
@@ -1252,6 +1263,8 @@ class Gain_Plot:
                 if line.startswith ('FREQUENCY'):
                     if ':' in line:
                         f = float (line.split (':') [1].split () [0])
+                    elif '=' in line:
+                        f = float (line.split ('=') [1].split () [0])
                     else:
                         f = float (line.split () [-1])
                     delimiter = guard
@@ -1275,12 +1288,20 @@ class Gain_Plot:
                 if 'ANTENNA INPUT PARAMETERS' in line:
                     status = 'antenna-input'
                     continue
+                # 4nec2 format, the 'ANTENNA INPUT PARAMETERS' line has
+                # an empty line after it
+                if splt.startswith ('TAG SEG. VOLTAGE (VOLTS) CURRENT'):
+                    status = 'antenna-input'
+                    continue
                 # NEC2 file
                 if status == 'antenna-input' and line [0].isnumeric ():
                     l = line.split ()
-                    assert len (l) == 11
-                    a, b = (float (x) for x in l [6:8])
-                    impedance = a + 1j * b
+                    assert 10 <= len (l) <= 11
+                    if len (l) == 11:
+                        a, b = (float (x) for x in l [6:8])
+                        impedance = a + 1j * b
+                    else:
+                        impedance = complex (l [6] + 'j')
                     idata  = self.idata [f] = Impedance_Data (f, impedance)
                     status = 'start'
                     continue
@@ -1292,9 +1313,12 @@ class Gain_Plot:
                 if delimiter == guard:
                     # NEC Radiation pattern specify type of polarization
                     # vs. Major/Minor axis
-                    if splt.startswith ('THETA PHI VERTC HORIZ TOTAL'):
+                    if splt.startswith ('THETA PHI VERT. HOR. TOTAL'):
+                        is_4n  = True
                         nec_vh = True
-                    if splt.startswith ('THETA PHI MAJOR MINOR TOTAL'):
+                    elif splt.startswith ('THETA PHI VERTC HORIZ TOTAL'):
+                        nec_vh = True
+                    elif splt.startswith ('THETA PHI MAJOR MINOR TOTAL'):
                         nec_vh = False
                     # Original Basic implementation gain output
                     if line.endswith (',D'):
@@ -1306,9 +1330,9 @@ class Gain_Plot:
                         delimiter = None
                         status = 'mininec-gain'
                     # NEC file
-                    elif  (   line.startswith ('DEGREES   DEGREES        DB')
-                        and line.endswith ('VOLTS/M   DEGREES')
-                        ):
+                    elif (   splt.startswith ('DEGREES DEGREES DB')
+                         and splt.endswith ('VOLTS/M DEGREES')
+                         ):
                         delimiter = None
                         status = 'nec-gain'
                     elif splt == asap_p:
@@ -1324,20 +1348,20 @@ class Gain_Plot:
                             gdata = self.gdata [k] = Gain_Data (k, self)
                         continue
                 else:
-                    if not line or not line [0].isnumeric () or line == '0':
+                    fields = (line or '').split (delimiter)
+                    try:
+                        f0 = float (fields [0])
+                    except (ValueError, IndexError):
+                        f0 = None
+                    if f0 is None or len (fields) < 4:
                         delimiter = guard
                         gdata = None
                         status = 'start'
                         continue
-                    fields = line.split (delimiter)
                     # Special case of older mininec format, w
                     old_mininec = False
-                    if len (fields) == 4 and fields [0][0].isnumeric ():
+                    if len (fields) == 4:
                         old_mininec = True
-                    elif len (fields) < 5 or not fields [0][0].isnumeric ():
-                        delimiter = guard
-                        gdata = None
-                        continue
                     if old_mininec:
                         zen, azi, vp, hp = (float (x) for x in fields [:4])
                         v = 10 ** (vp / 10) + 10 ** (hp / 10)
@@ -1358,6 +1382,9 @@ class Gain_Plot:
                             tot = np.log (hpl + vpl) / log10 * 10
                     else:
                         zen, azi, vp, hp, tot = (float (x) for x in fields [:5])
+                        if is_4n:
+                            assert zen <= 0
+                            zen = 180 + zen
                     # GNN-file, mininec gain and nec gain share the format
                     # for the first 5 columns of gain data
                     for p, v in (('H', hp), ('V', vp), ('sum', tot)):

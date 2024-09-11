@@ -669,4 +669,67 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_nec_geo_inv_v
 
+    def test_4nec2_azi (self):
+        infile = 'test/dip-4n.4out'
+        args = ['--azi', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_azi
+
+    def test_4nec2_azi_plotly (self):
+        infile = 'test/dip-4n.4out'
+        args = ['-S', '--azi', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_azi_plotly
+
+    def test_4nec2_ele (self):
+        infile = 'test/dip-4n.4out'
+        args = ['--ele', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_ele
+
+    def test_4nec2_ele_plotly (self):
+        infile = 'test/dip-4n.4out'
+        args = ['-S', '--ele', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_ele_plotly
+
+    def test_4nec2_3d (self):
+        infile = 'test/dip-4n.4out'
+        args = ['--3d', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_3d
+
+    def test_4nec2_3d_plotly (self):
+        infile = 'test/dip-4n.4out'
+        args = ['-S', '--3d', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_3d_plotly
+
+    def test_4nec2_geo (self):
+        infile = 'test/dip-4n.4out'
+        args = ['--geo', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_geo
+
+    def test_4nec2_geo_plotly (self):
+        infile = 'test/dip-4n.4out'
+        args = ['-S', '--geo', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_geo_plotly
+
+    def test_4nec2_swr (self):
+        infile = 'test/dip-4n.4out'
+        args = ['--swr', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_4nec2_swr
+
 # end class Test_Plot
