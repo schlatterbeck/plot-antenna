@@ -732,4 +732,11 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_4nec2_swr
 
+    def test_fortran_swr (self):
+        infile = 'test/dip-som.out'
+        args = ['--swr', infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_fortran_swr
+
 # end class Test_Plot

@@ -1296,12 +1296,25 @@ class Gain_Plot:
                 # NEC2 file
                 if status == 'antenna-input' and line [0].isnumeric ():
                     l = line.split ()
-                    assert 10 <= len (l) <= 11
+                    assert 9 <= len (l) <= 11
                     if len (l) == 11:
                         a, b = (float (x) for x in l [6:8])
                         impedance = a + 1j * b
+                    # Fortran output sometimes misses spaces in complex numbers
                     else:
-                        impedance = complex (l [6] + 'j')
+                        iidx = 6
+                        # voltage is missing space?
+                        if len (l [2]) > 11:
+                            iidx -= 1
+                        # current is missing space?
+                        if len (l [3]) > 11 or len (l [4]) > 11:
+                            iidx -= 1
+                        # impedance is missing space?
+                        if len (l [iidx]) > 11:
+                            impedance = complex (l [iidx] + 'j')
+                        else:
+                            a, b = (float (x) for x in l [iidx:iidx+2])
+                            impedance = a + 1j * b
                     idata  = self.idata [f] = Impedance_Data (f, impedance)
                     status = 'start'
                     continue
