@@ -33,12 +33,11 @@ dynamic         = ["version"]
 authors         = [{ name="Ralf Schlatterbeck", email="rsc@runtux.com" }, ]
 description     = "Antenna plotting program for plotting antenna simulation results"
 readme          = "README.rst"
-license         = {text = "MIT License"}
+license         = "MIT"
 requires-python = '>=3.7'
 dependencies    = ['matplotlib', 'numpy', 'pandas', 'plotly' ]
 classifiers     = [
           'Development Status :: 5 - Production/Stable'
-        , 'License :: OSI Approved :: MIT License'
         , 'Operating System :: OS Independent'
         , 'Programming Language :: Python'
         , 'Intended Audience :: Science/Research'
