@@ -172,24 +172,10 @@ measurements were separate for horizontal and vertical polarization.
 
 .. [1] L. B. Cebik. Radiation plots: Polar or rectangular; log or linear.
     In Antenna Modeling Notes [2], chapter 48, pages 366–379. Available
-    in Cebik's `Antenna modelling notes episode 48`_
+    in Cebik's `Antenna modelling notes episode 48`_ or `from web
+    archive`_
 .. [2] L. B. Cebik. Antenna Modeling Notes, volume 2. antenneX Online
-    Magazine, 2003. Available with antenna models from the `Cebik
-    collection`_.
-
-.. _`Cebik collection`:
-    http://on5au.be/Books/allmodnotes.zip
-.. _`Antenna modelling notes episode 48`:
-    http://on5au.be/content/amod/amod48.html
-.. _nec2c: https://packages.debian.org/stable/hamradio/nec2c
-.. _pymininec: https://github.com/schlatterbeck/pymininec
-.. _matplotlib: https://matplotlib.org/
-.. _plotly: https://github.com/plotly/plotly.py
-.. _pandas: https://pandas.pydata.org/
-.. _Mininec: https://github.com/Kees-PA3KJ/MiniNec
-.. _ASAP: http://raylcross.net/asap/index.html
-.. _EZNEC: https://eznec.com/
-.. _plot-antenna: https://github.com/schlatterbeck/plot-antenna
+    Magazine, 2003. Available `Cebik collection`_
 
 Release Notes
 -------------
@@ -301,3 +287,17 @@ v1.1: Specification of azimuth / elevation angle
 v1.0: Initial Release
 
 .. _`patched pySmithPlot`: https://github.com/schlatterbeck/pySmithPlot
+.. _`Cebik collection`:
+    https://q82.uk/projects/cebik/modelling/W4RNL%20Antenna%20Modelling%20Notes%20Volume%202.pdf
+.. _`from web archive`: https://web.archive.org/web/20230816222342/http://on5au.be/content/amod/amod48.html
+.. _`Antenna modelling notes episode 48`:
+    https://q82.uk/projects/cebik/modelling/48.%20Radiation%20Plots%20%20-%20Polar%20or%20Rectangular.%20Log%20or%20Linear.pdf
+.. _nec2c: https://packages.debian.org/stable/hamradio/nec2c
+.. _pymininec: https://github.com/schlatterbeck/pymininec
+.. _matplotlib: https://matplotlib.org/
+.. _plotly: https://github.com/plotly/plotly.py
+.. _Mininec: https://github.com/Kees-PA3KJ/MiniNec
+.. _ASAP: http://raylcross.net/asap/index.html
+.. _EZNEC: https://eznec.com/
+.. _plot-antenna: https://github.com/schlatterbeck/plot-antenna
+
