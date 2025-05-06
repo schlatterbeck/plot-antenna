@@ -170,6 +170,88 @@ Note that for the measurement-data the unit of the data is not in dBi
 but (because it was measured and not calibrated to dBi) in dBm. The
 measurements were separate for horizontal and vertical polarization.
 
+The program for plotting the measurements is in
+``plot_antenna/contrib.py``. It can serve as an example of how to plot
+your own data with `plot-antenna`_. The eznec program in
+``plot_antenna/eznec.py`` might even be better in this regard. See the
+next section on documentation of the `plot-antenna`_ API.
+
+Plot-Antenna API
+----------------
+
+The main class to plot things is the ``Gain_Plot`` class. It gets the
+command-line arguments and the gain data to plot. Note that the class is
+a little mis-named now because it can also do all the other plots (e.g.
+standing wave ratio, SWR). The gain data passed to the constructor of
+``Gain_Plot`` gets a dictionary of ``Gain_Data`` objects. The keys of
+the dictionary are tuples ``(frequency, string)`` where the frequency is
+the frequency of the ``Gain_Data`` and the string is used for describing
+what is plotted. Since `plot-antenna`_ can have traces for the different
+polarizations in the same plot, usually the string is one of ``H`` for
+horizontal polarization, ``V`` for vertical polarization and ``sum`` for
+the sum of all polarizations. Of course only the sum can be provided if
+we do not want multiple polarizations.
+
+If you are not plotting gain but, say, only SWR data, the gain data
+object passed to the ``Gain_Plot`` constructor may be ``None``.
+
+The ``Gain_Data`` object gets a list of frequencies in the constructor.
+It has an internal ``pattern`` dictionary which stores the gain values
+by a tuple of ``(theta, phi)`` where ``theta`` is the elevation angle
+(measured from the zenith=0 degrees) and the azimuth angle phi measured
+from the positive X-axis. The gain values in this data structure are in
+dBi (dezibel over an isotropic radiator). There is currently no way to
+directly pass a numpy array with the gains. A simple program to
+construct an azimuth plot of an antenna that has the same pattern in all
+directions (gain=0dB) where 
+
+    import numpy as np
+    from plot_antenna import plot_antenna
+
+    frequency = 430.0
+    polarization = 'sum'
+    key = (frequency, polarization)
+    gdict = {key: plot_antenna.Gain_Data ([frequency])}
+    data = gdict [key].pattern
+    for azi in np.arange (0, 361, 10):
+        data [(90.0, azi)] = 0.0
+    gp = plot_antenna.Gain_Plot (args, gdict)
+    gp.compute ()
+    gp.plot ()
+
+The parsed arguments can typically be constructed by calling one of the
+argument parsing functions. These need not be given the real command
+line arguments but can be called with an empty string list, e.g.:
+
+    # Initialize command options with general options
+    cmd = plot_antenna.options_general ()
+    # Add gain options
+    plot_antenna.options_gain (cmd)
+    # Parse empty arguments resulting in default args
+    args = plot_antenna.process_args (cmd, [])
+    # The filename is needed internally for computing default title
+    args.filename = ''
+    # Title
+    args.title = 'My Title'
+    # We want an azimuth plot
+    args.azimuth = True
+    # We might want to ship result to running browser with plotly
+    # args.show_in_browser = True
+
+The ``cmd`` variable is a python ``ArgumentParser`` object. So if you
+are parsing command line arguments you can add your own options before
+calling ``process_args``
+
+If not parsing argument from the command line and arguments should be
+changed this can be done by directly modifying args, e.g.::
+
+    args.title = 'This is the title of my plot'
+
+A full but short implementation of a usage of this API can be found in
+the companion program for reading EZNEC data in
+``plot_antenna/eznec.py``. This example can be found in ``example.py``.
+
+
 .. [1] L. B. Cebik. Radiation plots: Polar or rectangular; log or linear.
     In Antenna Modeling Notes [2], chapter 48, pages 366–379. Available
     in Cebik's `Antenna modelling notes episode 48`_ or `from web
