@@ -350,8 +350,11 @@ class Gain_Data:
     # end def compute
 
     def azimuth_gains (self, scaler):
-        g = self.gains [self.parent.theta_angle_idx]
-        gains = scaler.scale (self.maxgain, g)
+        g  = self.gains [self.parent.theta_angle_idx]
+        mg = self.maxgain
+        if self.parent.args.scale_by_angle:
+            mg = self.parent.theta_angle_max
+        gains = scaler.scale (mg, g)
         return gains, g
     # end def azimuth_gains
 
@@ -361,7 +364,10 @@ class Gain_Data:
         unit = self.parent.args.dB_unit
         if self.do_polarization:
             desc.append ('Polarization: ' + self.key [1])
-        desc.append ('Outer ring: %.2f %s' % (self.maxgain, unit))
+        mg = self.maxgain
+        if self.parent.args.scale_by_angle:
+            mg = self.parent.theta_angle_max
+        desc.append ('Outer ring: %.2f %s' % (mg, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Elevation: %.2f°'
@@ -382,8 +388,11 @@ class Gain_Data:
         # measurements with uneven angles this may be larger
         assert diff - np.pi <= self.max_phi_diff
         gains2 = self.gains.T [idx].T
-        g = np.append (gains1, np.flip (gains2))
-        gains = scaler.scale (self.maxgain, g)
+        g  = np.append (gains1, np.flip (gains2))
+        mg = self.maxgain
+        if self.parent.args.scale_by_angle:
+            mg = self.parent.phi_angle_max
+        gains = scaler.scale (mg, g)
         return gains, g
     # end def elevation_gains
 
@@ -393,7 +402,10 @@ class Gain_Data:
         unit = self.parent.args.dB_unit
         if self.do_polarization:
             desc.append ('Polarization: ' + self.key [1])
-        desc.append ('Outer ring: %.2f %s' % (self.maxgain, unit))
+        mg = self.maxgain
+        if self.parent.args.scale_by_angle:
+            mg = self.parent.phi_angle_max
+        desc.append ('Outer ring: %.2f %s' % (mg, unit))
         desc.append ('Scaling: %s' % scaler.title)
         desc.append \
             ( 'Azimuth: %.2f° (X=0°)'
@@ -942,6 +954,15 @@ class Gain_Plot:
                 (thetas, 90 - self.args.angle_elevation)
         else:
             self.theta_angle_idx = self.theta_maxidx
+        # Maximum @angle_elevation and @angle_azimuth
+        self.theta_angle_max = self.phi_angle_max = None
+        for v in self.gdata.values ():
+            t_max = np.nanmax (v.gains [self.theta_angle_idx, :])
+            p_max = np.nanmax (v.gains [:, self.phi_angle_idx])
+            if self.theta_angle_max is None or t_max > self.theta_angle_max:
+                self.theta_angle_max = t_max
+            if self.phi_angle_max is None or p_max > self.phi_angle_max:
+                self.phi_angle_max = p_max
     # end def compute
 
     def new_geo (self, gnd = False):
@@ -2608,6 +2629,13 @@ def options_gain (cmd = None):
     cmd.add_argument \
         ( '--plot3d', '--3d', '--plot-3d', '--3D'
         , help    = 'Do a 3D plot'
+        , action  = 'store_true'
+        )
+    cmd.add_argument \
+        ( '--scale-by-angle'
+        , help    = 'Scale azimuth plot by maximum at angle-elevation'
+                    ' and elevation plot by maximum at angle-azimuth, by'
+                    ' default both are scaled by global maximum'
         , action  = 'store_true'
         )
     cmd.add_argument \

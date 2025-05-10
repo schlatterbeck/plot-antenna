@@ -56,6 +56,31 @@ above. The pattern look smoother but a 3D-view in matplotlib_ will be
 very slow due to the large number of points. This problem does not occur
 when using the plotly_ backend.
 
+Sometimes we do not want the azimuth plot at the maximum elevation angle
+or the elevation plot at the maximum azimuth angle. You can specify the
+elevation angle for the azimuth plot with the ``--angle-elevation``
+option and the azimuth angle for the elevation plot with
+``--angle-azimuth``. An example azimuth plot of the same antenna at an
+elevation angle of 15° can be plotted with::
+
+    plot-antenna --azimuth --angle-elevation=15 test/12-el-1deg.pout
+
+.. figure:: https://raw.githubusercontent.com/schlatterbeck/plot-antenna/master/test/12-el-azi-angle-ele15.png
+    :align: center
+
+As you can see, the azimuth-plot is scaled to the maximum gain of the
+antenna. Sometimes we want to scale the gain to the maximum *at that
+elevation (or azimuth) angle*. This can be achieved with the
+``--scale-by-angle`` option::
+
+    plot-antenna --azi --angle-ele=15 --scale-by-angle test/12-el-1deg.pout
+
+.. figure:: https://raw.githubusercontent.com/schlatterbeck/plot-antenna/master/test/12-el-azi-angle-e15-sc.png
+    :align: center
+
+You can see that now the pattern is scaled to the maximum *at that
+elevation angle*. The outer ring now has 12.92 dBi instead of 14.50 dBi.
+
 The plot program also has a ``--help``
 option for further information. In particular the scaling of the antenna
 plot can be selected using the ``--scaling-method`` option with an
@@ -200,10 +225,10 @@ It has an internal ``pattern`` dictionary which stores the gain values
 by a tuple of ``(theta, phi)`` where ``theta`` is the elevation angle
 (measured from the zenith=0 degrees) and the azimuth angle phi measured
 from the positive X-axis. The gain values in this data structure are in
-dBi (dezibel over an isotropic radiator). There is currently no way to
+dBi (Decibel over an isotropic radiator). There is currently no way to
 directly pass a numpy array with the gains. A simple program to
 construct an azimuth plot of an antenna that has the same pattern in all
-directions (gain=0dB) where 
+directions (gain=0dB) would be::
 
     import numpy as np
     from plot_antenna import plot_antenna
@@ -221,7 +246,7 @@ directions (gain=0dB) where
 
 The parsed arguments can typically be constructed by calling one of the
 argument parsing functions. These need not be given the real command
-line arguments but can be called with an empty string list, e.g.:
+line arguments but can be called with an empty string list, e.g.::
 
     # Initialize command options with general options
     cmd = plot_antenna.options_general ()
@@ -261,6 +286,15 @@ the companion program for reading EZNEC data in
 
 Release Notes
 -------------
+
+v2.1: Scale by angle
+
+- New option ``--scale-by-angle`` that allows to scale the azimuth or
+  elevation pattern to the maximum at the current elevation- or azimuth
+  angle instead of the global maximum, thanks to Daniel Bruschinski for
+  suggesting this
+- Add a little documentation how to use the API, thanks to Alex, VE3NEA
+  for suggesting this in a github issue.
 
 v2.0: More input formats
 
