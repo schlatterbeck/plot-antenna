@@ -1719,7 +1719,7 @@ class Gain_Plot:
                 tickangle = -90
             fig.layout.polar.radialaxis.tickangle = tickangle
             fig.layout.polar.radialaxis.angle = lbl_deg
-            fig.layout.polar.radialaxis.range = [0,1]
+            fig.layout.polar.radialaxis.range = [0, 1.01]
 # Trying to display 'X' and 'Y' on Azimuth plot
 # Doesn't work: This doesn't correctly scale and it seems giving
 # annotations in polar coordinates is still not possible
@@ -1755,6 +1755,7 @@ class Gain_Plot:
         ax.set_rmax (1)
         ax.set_rlabel_position (self.lbl_deg  or 0)
         ax.set_thetagrids (range (0, 360, 15))
+        ax.set_ylim ([0, 1.01])
         if self.labels:
             d = dict (fontsize = 18, transform = ax.transAxes)
             plt.text (1.1, 0.5, self.labels [0], va = 'center', **d)
