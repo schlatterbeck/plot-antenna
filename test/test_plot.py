@@ -739,4 +739,25 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_fortran_swr
 
+    def test_geo_gridhelix (self):
+        infile = "test/helix-small.nout"
+        args = ["--title=", "--geo", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo_gridhelix
+
+    def test_geo_gridhelix_plotly (self):
+        infile = "test/helix-small.nout"
+        args = ["--title=", "--geo", "-S", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo_gridhelix_plotly
+
+    def test_geo_simple (self):
+        infile = "test/t2.nout"
+        args = ["--title=", "--geo", infile]
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_geo_simple
+
 # end class Test_Plot

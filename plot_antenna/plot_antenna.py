@@ -1231,12 +1231,13 @@ class Gain_Plot:
                     geo.wires [-1].append ([float (a) for a in l [:3]])
                     continue
                 if status == 'necgeo':
-                    # Fixme: This should really be lambda-dependent
-                    eps = 1e-3
                     started = False
                     ll = line.split ()
                     idx = int (ll [0])
                     x, y, z, l, alpha, beta = (float (a) for a in ll [1:7])
+                    # Make eps dependent on segment length
+                    # Listing in segmentation data in NEC can be very crude
+                    eps = l / 10
                     tag = int (ll [-1])
                     if tag not in self.seg_by_tag:
                         self.seg_by_tag [tag] = []
@@ -1252,15 +1253,16 @@ class Gain_Plot:
                     elif aprev != idx - 1 and aprev != idx:
                         geo.append ([])
                         a, b = necidx [aprev]
-                        if prev > 0:
-                            b += 1
+                        if prev < 0:
+                            b -= 1
+                            assert b >= 0
                         geo [-1].append (geo [a][b])
-                        started = True
+                        # Enabling this masks bugs in computation above:
+                        #started = True
                     elif prev == cur and gnd:
                         geo.append ([])
                         started = True
                         gnd = None
-                    necidx [idx] = (len (geo) - 1, len (geo [-1]) - 1)
                     alpha = alpha / 180 * np.pi
                     beta  = beta  / 180 * np.pi
                     cos_t = np.cos (alpha)
@@ -1279,6 +1281,10 @@ class Gain_Plot:
                     else:
                         assert np.linalg.norm (geo [-1][-1] - st) < eps
                         geo [-1].append (en)
+                    necidx [idx] = (len (geo) - 1, len (geo [-1]) - 1)
+                    assert necidx [idx][0] >= 0 and necidx [idx][1] >= 0
+                    # Just assert we can access geo at this indeces
+                    assert len (geo [necidx [idx][0]][necidx [idx][1]]) == 3
                     continue
                 # Similar for NEC, MININEC, ASAP:
                 if line.startswith ('FREQUENCY'):
