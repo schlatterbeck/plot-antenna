@@ -760,4 +760,20 @@ class Test_Plot (unittest.TestCase):
         self.compare_cs ()
     # end def test_geo_simple
 
+    def test_scale_by_angle (self):
+        infile = "test/inve802B.pout"
+        args = "--title= --azi --angle-ele=35 --scale-by-angle".split ()
+        args.append (infile)
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_scale_by_angle
+
+    def test_scale_by_angle_plotly (self):
+        infile = "test/inve802B.pout"
+        args = "-S --title= --azi --angle-ele=35 --scale-by-angle".split ()
+        args.append (infile)
+        main (args, pic_io = self.pic_io)
+        self.compare_cs ()
+    # end def test_scale_by_angle_plotly
+
 # end class Test_Plot
