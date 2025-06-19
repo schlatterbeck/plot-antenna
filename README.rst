@@ -287,6 +287,21 @@ the companion program for reading EZNEC data in
 Release Notes
 -------------
 
+v2.3: Fix nec geo computation
+
+- Fix a bug when parsing NEC geo info, in particular back-references in
+  geometry segments
+- Update tests for recent changes, unfortunately the plotly PNG pics
+  seem not to be reproduceable across different installations of the
+  same plotly version
+
+v2.2: Fix radial axis range of polar plots
+
+- Polar plots were scaled differently depending on data, we now force
+  the polar axis range to a maximum of 1.01 (on both, matplotlib and
+  plotly backends) so that the trace(s) always fit without truncating
+  the trace at the boundary
+
 v2.1: Scale by angle
 
 - New option ``--scale-by-angle`` that allows to scale the azimuth or
