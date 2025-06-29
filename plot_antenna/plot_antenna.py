@@ -261,16 +261,22 @@ class Gain_Data:
         sum, but other parsers may use different values.
         Circular polarization is not yet parsed from NEC output, MININEC
         doesn't compute circular polarization.
+        The parameter transform is an options coordinate transformation,
+        e.g. when gains are not in the typical elevation/azimuth format.
     """
 
-    def __init__ (self, key, parent = None):
+    def __init__ (self, key, parent = None, transform = None):
         self.parent   = parent
         self.key      = key
         self.pattern  = {}
+        self.coordinate_transform = transform
     # end def __init__
 
     def __len__ (self):
-        return len (self.pattern)
+        if self.pattern is not None:
+            return len (self.pattern)
+        shp = self.gains.shape
+        return shp [0] * shp [1]
     # end def __len__
 
     @property
@@ -306,19 +312,6 @@ class Gain_Data:
         for theta, phi in sorted (self.pattern):
             thetas.add (theta)
             phis.add   (phi)
-        self.max_phi_diff = self.max_theta_diff = 1e-9
-        if pairwise is not None:
-            tdiff = None
-            for a, b in pairwise (sorted (thetas)):
-                if tdiff is None or abs (a - b) > tdiff:
-                    tdiff = abs (a - b)
-            self.max_theta_diff = tdiff
-            pdiff = None
-            for a, b in pairwise (sorted (phis)):
-                if pdiff is None or abs (a - b) > pdiff:
-                    pdiff = abs (a - b)
-            self.max_phi_diff = pdiff
-
         td = list (sorted (thetas))
         pd = list (sorted (phis))
         self.thetas_d = np.array (td)
@@ -331,6 +324,21 @@ class Gain_Data:
             tidx = td.index (theta)
             pidx = pd.index   (phi)
             self.gains [tidx][pidx] = self.pattern [(theta, phi)]
+        if callable (self.coordinate_transform):
+            self.coordinate_transform (self)
+
+        self.max_phi_diff = self.max_theta_diff = 1e-9
+        if pairwise is not None:
+            tdiff = None
+            for a, b in pairwise (self.thetas_d):
+                if tdiff is None or abs (a - b) > tdiff:
+                    tdiff = abs (a - b)
+            self.max_theta_diff = tdiff
+            pdiff = None
+            for a, b in pairwise (self.phis_d):
+                if pdiff is None or abs (a - b) > pdiff:
+                    pdiff = abs (a - b)
+            self.max_phi_diff = pdiff
 
         self.maxg = np.nanmax (gains)
         idx = np.unravel_index (np.nanargmax (self.gains), self.gains.shape)
@@ -347,6 +355,7 @@ class Gain_Data:
         self.desc.append ('Frequency: ' + format_f (self.key [0], 2))
         self.lbl_deg   = 0
         self.labels    = None
+        self.pattern   = None
     # end def compute
 
     def azimuth_gains (self, scaler):
@@ -897,7 +906,9 @@ class Gain_Plot:
                     if len (hp) != len (vp):
                         raise ValueError \
                             ('Polarization sum: H/V angles do not match')
-                    gsum = Gain_Data ((f, 'sum'), self)
+                    assert h.coordinate_transform is v.coordinate_transform
+                    gsum = Gain_Data \
+                        ((f, 'sum'), self, transform = h.coordinate_transform)
                     self.gdata [(f, 'sum')] = gsum
                     for kh, kv in zip (hp, vp):
                         if kh != kv:

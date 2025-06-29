@@ -3,8 +3,42 @@
 # Parsers for contributed data structures
 
 import sys
+import numpy as np
 from csv import DictReader
 from . import plot_antenna as aplot
+
+def coordinate_transform (gd):
+    """ Coordinate transformation on gain data: The measurement
+        describes a great circle for each elevation, so the 'poles' are
+        on the axis of the positioner. The positioner axis becomes the
+        new Z axis and new elevations are the azimuth values. The new
+        azimuths are computed from the elevations.
+    """
+    t = gd.phis_d [gd.phis_d <= 180]
+    assert len (t) == 181
+    p = sorted (list (set (gd.thetas_d).union (gd.thetas_d + 180)))
+    assert len (p) in (36, 37, 72, 73)
+    if len (p) == 36 or len (p) == 72:
+        p.append (360.)
+    p = np.array (p)
+    shp = gd.gains.shape
+    ng = np.zeros ((len (t), len (p)))
+    for nth, theta in enumerate (t):
+        for nph, phi in enumerate (p):
+            if phi < 180:
+                oth = nph
+            else:
+                oth = len (gd.thetas_d) - (nph % (len (p) // 2)) - 1
+            oph = nth
+            if phi > 180:
+                oph = 360 - nth
+            ng [nth, nph] = gd.gains [oth, oph]
+    gd.gains    = ng
+    gd.phis_d   = p
+    gd.thetas_d = t
+    gd.phis     = p * np.pi / 180
+    gd.thetas   = t * np.pi / 180
+# end def coordinate_transform
 
 def parse_csv_measurement_data (args):
     """ Parses measurement data from CSV file
@@ -30,6 +64,9 @@ def parse_csv_measurement_data (args):
           2° grid.
         - Some azimuth angles are greater than 360°.
     """
+    # We always need to interpolate to do the coordinate transformation
+    # And we fix this to 1° for ease of coordinate transform
+    args.interpolate_azimuth_step = 1
     gdata_dict = {}
     with open (args.filename, 'r') as f:
         dr = DictReader (f, delimiter = ';')
@@ -40,12 +77,16 @@ def parse_csv_measurement_data (args):
                 p = rec ['Polarisation'][1:]
                 k = (f, p)
                 if k not in gdata_dict:
-                    gdata_dict [k] = aplot.Gain_Data (k)
+                    gdata_dict [k] = aplot.Gain_Data \
+                        (k, transform = coordinate_transform)
                 gdata = gdata_dict [k]
             azi = float (rec ['Position Drehscheibe']) % 360
             # Need to round elevation values: these sometimes differ
             # during a scan
-            ele = round (float (rec ['Position Positionierer']), 0)
+            ele = float (rec ['Position Positionierer'])
+            if args.round_elevation > 0:
+                rel = args.round_elevation
+                ele = round (ele / rel, 0) * rel
             # Don't allow values outside angle range
             if azi < 0 or azi > 360 or ele < 0 or ele > 360:
                 continue
@@ -66,6 +107,12 @@ def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
     cmd = aplot.options_general ()
     aplot.options_gain (cmd)
     cmd.add_argument ('filename', help = 'CSV File to parse and plot')
+    cmd.add_argument \
+        ( '--round-elevation'
+        , help   = "Round elevation to this many degrees, default=$(default)s"
+        , type   = int
+        , default = 2
+        )
     args = aplot.process_args (cmd, argv)
     # Set default polarization, we need this otherwise the sum isn't computed
     if not args.polarization:
@@ -76,6 +123,27 @@ def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
     gdata = parse_csv_measurement_data (args)
     gp = aplot.Gain_Plot (args, gdata)
     gp.compute ()
+    if 0:
+        # Try find (old) azimuth where only the polarization changes
+        # This assumes that the phi angles are the same for H and V
+        keys = list (gp.gdata)
+        key  = None
+        for k in keys:
+            if len (k) == 2 and k [1] == 'sum':
+                key = k
+                break
+        if key is not None:
+            stat = {}
+            for oph, phi in enumerate (gp.gdata [key].phis_d):
+                gbp = []
+                for oth, theta in enumerate (gp.gdata [key].thetas_d):
+                    gbp.append (gp.gdata [key].gains [oth, oph])
+                gbp = np.array (gbp)
+                stat [phi] = (np.average (gbp), np.std (gbp))
+            for k in stat:
+                print ("%3g: avg: %g std: %g cv: %g" % (k, stat [k][0],
+                    stat [k][1], stat [k][1] / abs (stat [k][0])))
+
     gp.plot ()
 # end def main_csv_measurement_data
 

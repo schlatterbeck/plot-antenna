@@ -1,4 +1,4 @@
-# Copyright (C) 2022-24 Ralf Schlatterbeck. All rights reserved
+# Copyright (C) 2022-25 Ralf Schlatterbeck. All rights reserved
 # Reichergasse 131, A-3411 Weidling
 # ****************************************************************************
 #
@@ -397,22 +397,22 @@ class Test_Plot (unittest.TestCase):
 
     def test_measurement (self):
         infile = "test/Messdaten.csv"
-        args = ["--azi", "--polari=H", infile]
+        args = ["--ele", "--polari=H", infile]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_measurement
 
     def test_measurement_plotly (self):
         infile = "test/Messdaten.csv"
-        args = ["--azi", "--polari=H", "-S", infile]
+        args = ["--ele", "--polari=H", "-S", infile]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_measurement_plotly
 
     def test_measurement_full (self):
         infile = "test/Messdaten.csv"
-        args = [ "--ele", "--polari=H", "--polari=V", "--polari=sum"
-               , "--matp", "--angle-ele=10.3", "--interpol=2", infile
+        args = [ "--azi", "--polari=H", "--polari=V", "--polari=sum"
+               , "--matp", "--angle-ele=-27", infile
                ]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
@@ -420,8 +420,8 @@ class Test_Plot (unittest.TestCase):
 
     def test_measurement_full_plotly (self):
         infile = "test/Messdaten.csv"
-        args = [ "--ele", "--polari=H", "--polari=V", "--polari=sum"
-               , "--matp", "--angle-ele=10.3", "--interpol=2", "-S", infile
+        args = [ "--azi", "--polari=H", "--polari=V", "--polari=sum"
+               , "--matp", "--angle-ele=-27", "-S", infile
                ]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
