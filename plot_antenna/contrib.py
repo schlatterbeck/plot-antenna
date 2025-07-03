@@ -15,24 +15,29 @@ def coordinate_transform (gd):
         azimuths are computed from the elevations.
     """
     t = gd.phis_d [gd.phis_d <= 180]
-    assert len (t) == 181
     p = sorted (list (set (gd.thetas_d).union (gd.thetas_d + 180)))
-    assert len (p) in (36, 37, 72, 73)
-    if len (p) == 36 or len (p) == 72:
+    if p [-1] != 360.:
         p.append (360.)
+    otl = len (gd.thetas_d)
+    if gd.thetas_d [otl - 1] != 180:
+        otl += 1
     p = np.array (p)
     shp = gd.gains.shape
     ng = np.zeros ((len (t), len (p)))
     for nth, theta in enumerate (t):
         for nph, phi in enumerate (p):
-            if phi < 180:
+            if phi <= 180:
                 oth = nph
             else:
-                oth = len (gd.thetas_d) - (nph % (len (p) // 2)) - 1
+                oth = otl - (nph % (len (p) // 2)) - 1
             oph = nth
             if phi > 180:
-                oph = 360 - nth
-            ng [nth, nph] = gd.gains [oth, oph]
+                oph = gd.phis.shape [0] - nth - 1
+            if oth == gd.gains.shape [0]:
+                # This happens only when 180° is missing for positioner
+                ng [nth, nph] = gd.gains [0, len (gd.phis) - oph - 1]
+            else:
+                ng [nth, nph] = gd.gains [oth, oph]
     gd.gains    = ng
     gd.phis_d   = p
     gd.thetas_d = t
@@ -44,9 +49,12 @@ def parse_csv_measurement_data (args):
     """ Parses measurement data from CSV file
         This has the columns:
         - Messwert: The measurement
+          May also be called 'eirp'
         - Einheit Messwert: Unit of the measurement (e.g. dBm)
+          This can also be called "Einheit eirp"
         - Position Drehscheibe: Azimuth angle
         - Position Positionierer: Elevation angle
+          also seen as Position Positioner
         - Polarisation: 'PH' for horizontal, 'PV' for vertical polarization
         - Messfrequenz: frequency
         - Einheit Messfrequenz: unit of frequency
@@ -66,12 +74,16 @@ def parse_csv_measurement_data (args):
     """
     # We always need to interpolate to do the coordinate transformation
     # And we fix this to 1° for ease of coordinate transform
-    args.interpolate_azimuth_step = 1
+    if args.interpolate_azimuth_step is None:
+        args.interpolate_azimuth_step = 1
     gdata_dict = {}
     with open (args.filename, 'r') as f:
         dr = DictReader (f, delimiter = ';')
         for rec in dr:
-            args.dB_unit = rec ['Einheit Messwert']
+            try:
+                args.dB_unit = rec ['Einheit Messwert']
+            except KeyError:
+                args.dB_unit = rec ['Einheit eirp']
             f = float (rec ['Messfrequenz']) * 1e3 # MHz
             if f not in gdata_dict:
                 p = rec ['Polarisation'][1:]
@@ -83,8 +95,11 @@ def parse_csv_measurement_data (args):
             azi = float (rec ['Position Drehscheibe']) % 360
             # Need to round elevation values: these sometimes differ
             # during a scan
-            ele = float (rec ['Position Positionierer'])
-            if args.round_elevation > 0:
+            try:
+                ele = float (rec ['Position Positionierer'])
+            except KeyError:
+                ele = float (rec ['Position Positioner'])
+            if args.round_elevation:
                 rel = args.round_elevation
                 ele = round (ele / rel, 0) * rel
             # Don't allow values outside angle range
@@ -94,7 +109,10 @@ def parse_csv_measurement_data (args):
             # Probably needs conversion but we may get away with
             # allowing a unit to be specified for the plot, it must be a
             # dezibel value, though (not linear gain or so)
-            gain = float (rec ['Messwert'])
+            try:
+                gain = float (rec ['Messwert'])
+            except KeyError:
+                gain = float (rec ['eirp'])
             gdata.pattern [(ele, azi)] = gain
     return gdata_dict
 # end def parse_csv_measurement_data
@@ -109,9 +127,8 @@ def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
     cmd.add_argument ('filename', help = 'CSV File to parse and plot')
     cmd.add_argument \
         ( '--round-elevation'
-        , help   = "Round elevation to this many degrees, default=$(default)s"
+        , help   = "Round elevation to this many degrees"
         , type   = int
-        , default = 2
         )
     args = aplot.process_args (cmd, argv)
     # Set default polarization, we need this otherwise the sum isn't computed

@@ -454,12 +454,15 @@ class Gain_Data:
                 assert p_r >= 0
                 l = self.pattern [(theta, p_l)]
                 r = self.pattern [(theta, p_r)]
+                p_l2 = p_l
                 if p_r < p_l:
-                    p_l -= 360
+                    p_l2 -= 360
+                    if azi % 360 < 10:
+                        p_l -= 360
                 if p_r == p_l:
                     v = l
                 else:
-                    v = (((azi % 360) - p_l) / (p_r - p_l) * (r - l) + l)
+                    v = (((azi % 360) - p_l) / (p_r - p_l2) * (r - l) + l)
                     assert l <= v <= r or l >= v >= r
                 pattern_new [(theta, azi)] = v
         self.pattern = pattern_new
