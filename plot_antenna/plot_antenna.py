@@ -387,16 +387,14 @@ class Gain_Data:
 
     def elevation_gains (self, scaler):
         gains1 = self.gains.T [self.parent.phi_angle_idx].T
-        # Find index of the other side of the azimuth
-        pmx = self.phis.shape [0] - self.phis.shape [0] % 2
-        idx = (self.parent.phi_angle_idx + pmx // 2) % pmx
-        assert idx != self.parent.phi_angle_idx
-        phis = self.phis
-        diff = abs (phis [idx] - phis [self.parent.phi_angle_idx])
+        diff = abs \
+            ( self.phis [self.parent.phi_angle_other]
+            - self.phis [self.parent.phi_angle_idx]
+            )
         # This should really be a very low value but if these are
         # measurements with uneven angles this may be larger
         assert diff - np.pi <= self.max_phi_diff
-        gains2 = self.gains.T [idx].T
+        gains2 = self.gains.T [self.parent.phi_angle_other].T
         g  = np.append (gains1, np.flip (gains2))
         mg = self.maxgain
         if self.parent.args.scale_by_angle:
@@ -962,6 +960,12 @@ class Gain_Plot:
                 (phis, self.args.angle_azimuth)
         else:
             self.phi_angle_idx = self.phi_maxidx
+        # Find index of the other side of the azimuth
+        phis = next (iter (self.gdata.values ())).phis_d
+        pmx  = phis.shape [0] - phis.shape [0] % 2
+        idx  = (self.phi_angle_idx + pmx // 2) % pmx
+        assert idx != self.phi_angle_idx
+        self.phi_angle_other = idx
         if self.args.angle_elevation is not None:
             thetas = next (iter (self.gdata.values ())).thetas_d
             self.theta_angle_idx = nearest_angle_idx \
@@ -975,6 +979,11 @@ class Gain_Plot:
             p_max = np.nanmax (v.gains [:, self.phi_angle_idx])
             if self.theta_angle_max is None or t_max > self.theta_angle_max:
                 self.theta_angle_max = t_max
+            if self.phi_angle_max is None or p_max > self.phi_angle_max:
+                self.phi_angle_max = p_max
+            # For theta we also need to take the *other side* of phi
+            # into account:
+            p_max = np.nanmax (v.gains [:, self.phi_angle_other])
             if self.phi_angle_max is None or p_max > self.phi_angle_max:
                 self.phi_angle_max = p_max
     # end def compute
