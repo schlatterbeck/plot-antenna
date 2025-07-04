@@ -92,15 +92,17 @@ def parse_csv_measurement_data (args):
                     gdata_dict [k] = aplot.Gain_Data \
                         (k, transform = coordinate_transform)
                 gdata = gdata_dict [k]
-            azi = float (rec ['Position Drehscheibe']) % 360
+            azi = ( float (rec ['Position Drehscheibe'])
+                  + args.turntable_offset
+                  ) % 360
             # Need to round elevation values: these sometimes differ
             # during a scan
             try:
                 ele = float (rec ['Position Positionierer'])
             except KeyError:
                 ele = float (rec ['Position Positioner'])
-            if args.round_elevation:
-                rel = args.round_elevation
+            if args.round_positioner:
+                rel = args.round_positioner
                 ele = round (ele / rel, 0) * rel
             # Don't allow values outside angle range
             if azi < 0 or azi > 360 or ele < 0 or ele > 360:
@@ -126,9 +128,15 @@ def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
     aplot.options_gain (cmd)
     cmd.add_argument ('filename', help = 'CSV File to parse and plot')
     cmd.add_argument \
-        ( '--round-elevation'
-        , help   = "Round elevation to this many degrees"
-        , type   = int
+        ( '--round-positioner'
+        , help    = "Round positioner angle to this many degrees"
+        , type    = int
+        )
+    cmd.add_argument \
+        ( '--turntable-offset'
+        , help    = "Offset in degrees of the turntable, default=%(default)s"
+        , type    = float
+        , default = 0.0
         )
     args = aplot.process_args (cmd, argv)
     # Set default polarization, we need this otherwise the sum isn't computed
