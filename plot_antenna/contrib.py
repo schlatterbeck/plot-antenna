@@ -21,9 +21,10 @@ def coordinate_transform (gd):
     otl = len (gd.thetas_d)
     if gd.thetas_d [otl - 1] != 180:
         otl += 1
-    p = np.array (p)
+    p   = np.array (p)
     shp = gd.gains.shape
-    ng = np.zeros ((len (t), len (p)))
+    ng  = np.zeros ((len (t), len (p)))
+    pl  = gd.phis_d.shape [0]
     for nth, theta in enumerate (t):
         for nph, phi in enumerate (p):
             if phi <= 180:
@@ -32,10 +33,10 @@ def coordinate_transform (gd):
                 oth = otl - (nph % (len (p) // 2)) - 1
             oph = nth
             if phi > 180:
-                oph = gd.phis.shape [0] - nth - 1
+                oph = pl - nth - 1
             if oth == gd.gains.shape [0]:
                 # This happens only when 180° is missing for positioner
-                ng [nth, nph] = gd.gains [0, len (gd.phis) - oph - 1]
+                ng [nth, nph] = gd.gains [0, pl - oph - 1]
             else:
                 ng [nth, nph] = gd.gains [oth, oph]
     gd.gains    = ng
