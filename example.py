@@ -16,18 +16,34 @@ args = plot_antenna.process_args (cmd, [])
 args.filename = ''
 # Title
 args.title = 'My Title'
-# We want an azimuth plot
-args.azimuth = True
 # We might want to ship result to running browser with plotly
 # args.show_in_browser = True
+# If we want to do a 3d-plot we set args.plot3d, we could also set
+# args.azimuth to get an azimuth plot. Both variables can be set and we
+# get both plots (one after the other with matplotlib, both in different
+# browser windows with plotly)
+args.azimuth = False
+args.plot3d  = True
 
 frequency = 430.0
 polarization = 'sum'
 key = (frequency, polarization)
-gdict = {key: plot_antenna.Gain_Data ([frequency])}
+# First variant: Use dictionary
+gdict = {key: plot_antenna.Gain_Data (key)}
 data = gdict [key].pattern
-for azi in np.arange (0, 361, 10):
-    data [(90.0, azi)] = 0.0
+for theta in np.arange (0, 181, 10):
+    for phi in np.arange (0, 361, 10):
+        data [(theta, phi)] = 0.0
+gp = plot_antenna.Gain_Plot (args, gdict)
+gp.compute ()
+gp.plot ()
+# Second variant: Use a two-dimensional gains array and theta and phi
+# angles in degrees, the shape of the gains array must match the lengths
+# of the thetas and phis arrays.
+thetas = np.arange (0, 181, 10)
+phis   = np.arange (0, 361, 10)
+gains  = np.zeros ((19, 37))
+gdict  = {key: plot_antenna.Gain_Data.from_gains (key, gains, thetas, phis)}
 gp = plot_antenna.Gain_Plot (args, gdict)
 gp.compute ()
 gp.plot ()

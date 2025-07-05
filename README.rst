@@ -225,21 +225,41 @@ It has an internal ``pattern`` dictionary which stores the gain values
 by a tuple of ``(theta, phi)`` where ``theta`` is the elevation angle
 (measured from the zenith=0 degrees) and the azimuth angle phi measured
 from the positive X-axis. The gain values in this data structure are in
-dBi (Decibel over an isotropic radiator). There is currently no way to
-directly pass a numpy array with the gains. A simple program to
-construct an azimuth plot of an antenna that has the same pattern in all
-directions (gain=0dB) would be::
+dBi (Decibel over an isotropic radiator).
+
+A simple program to construct an azimuth plot of an antenna that has the
+same pattern in all directions (gain=0dB) would be::
 
     import numpy as np
     from plot_antenna import plot_antenna
 
+    # Compute args, see below
     frequency = 430.0
     polarization = 'sum'
     key = (frequency, polarization)
-    gdict = {key: plot_antenna.Gain_Data ([frequency])}
+    gdict = {key: plot_antenna.Gain_Data (key)}
     data = gdict [key].pattern
-    for azi in np.arange (0, 361, 10):
-        data [(90.0, azi)] = 0.0
+    for theta in np.arange (0, 181, 10):
+        for phi in np.arange (0, 361, 10):
+            data [(theta, phi)] = 0.0
+    gp = plot_antenna.Gain_Plot (args, gdict)
+    gp.compute ()
+    gp.plot ()
+
+In the latest version you can also directly pass numpy arrays for gain,
+theta, and phi angles, angles are in degrees::
+
+    import numpy as np
+    from plot_antenna import plot_antenna
+
+    # Compute args, see below
+    frequency = 430.0
+    polarization = 'sum'
+    key = (frequency, polarization)
+    thetas = np.arange (0, 181, 10)
+    phis   = np.arange (0, 361, 10)
+    gains  = np.zeros ((19, 37))
+    gdict  = {key: plot_antenna.Gain_Data.from_gains (key, gains, thetas, phis)}
     gp = plot_antenna.Gain_Plot (args, gdict)
     gp.compute ()
     gp.plot ()
@@ -258,14 +278,18 @@ line arguments but can be called with an empty string list, e.g.::
     args.filename = ''
     # Title
     args.title = 'My Title'
-    # We want an azimuth plot
-    args.azimuth = True
     # We might want to ship result to running browser with plotly
     # args.show_in_browser = True
+    # If we want to do a 3d-plot we set args.plot3d, we could also set
+    # args.azimuth to get an azimuth plot. Both variables can be set and
+    # we get both plots (one after the other with matplotlib, both in
+    # different browser windows with plotly)
+    args.azimuth = False
+    args.plot3d  = True
 
 The ``cmd`` variable is a python ``ArgumentParser`` object. So if you
 are parsing command line arguments you can add your own options before
-calling ``process_args``
+calling ``process_args``.
 
 If not parsing argument from the command line and arguments should be
 changed this can be done by directly modifying args, e.g.::

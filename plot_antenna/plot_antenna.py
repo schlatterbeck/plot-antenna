@@ -263,6 +263,9 @@ class Gain_Data:
         doesn't compute circular polarization.
         The parameter transform is an options coordinate transformation,
         e.g. when gains are not in the typical elevation/azimuth format.
+        After calling compute we have gains and theta/phi angles.
+        Note that we can now directly pass gains and angles using the
+        class method from_gains.
     """
 
     def __init__ (self, key, parent = None, transform = None):
@@ -271,6 +274,16 @@ class Gain_Data:
         self.pattern  = {}
         self.coordinate_transform = transform
     # end def __init__
+
+    @classmethod
+    def from_gains (cls, key, gains, thetas_d, phis_d, parent = None):
+        gd = cls (key, parent)
+        gd.pattern  = None
+        gd.gains    = np.array (gains)
+        gd.thetas_d = np.array (thetas_d)
+        gd.phis_d   = np.array (phis_d)
+        return gd
+    # end def from_gains
 
     def __len__ (self):
         if self.pattern is not None:
@@ -306,27 +319,33 @@ class Gain_Data:
     # end def maxgain
 
     def compute (self):
-        thetas = set ()
-        phis   = set ()
-        gains  = []
-        for theta, phi in sorted (self.pattern):
-            thetas.add (theta)
-            phis.add   (phi)
-        td = list (sorted (thetas))
-        pd = list (sorted (phis))
-        self.thetas_d = np.array (td)
-        self.phis_d   = np.array (pd)
-        self.thetas   = self.thetas_d * np.pi / 180
-        self.phis     = self.phis_d   * np.pi / 180
+        if self.pattern:
+            thetas = set ()
+            phis   = set ()
+            gains  = []
+            for theta, phi in sorted (self.pattern):
+                thetas.add (theta)
+                phis.add   (phi)
+            td = list (sorted (thetas))
+            pd = list (sorted (phis))
+            self.thetas_d = np.array (td)
+            self.phis_d   = np.array (pd)
 
-        gains = self.gains = np.full ((len (thetas), len (phis)), NaN)
-        for theta, phi in sorted (self.pattern):
-            tidx = td.index (theta)
-            pidx = pd.index   (phi)
-            self.gains [tidx][pidx] = self.pattern [(theta, phi)]
-        if callable (self.coordinate_transform):
-            self.coordinate_transform (self)
+            gains = self.gains = np.full ((len (thetas), len (phis)), NaN)
+            for theta, phi in sorted (self.pattern):
+                tidx = td.index (theta)
+                pidx = pd.index   (phi)
+                self.gains [tidx][pidx] = self.pattern [(theta, phi)]
+            if callable (self.coordinate_transform):
+                self.coordinate_transform (self)
+        else:
+            assert self.gains is not None
+        self.compute_maxima ()
+    # end def compute
 
+    def compute_maxima (self):
+        self.thetas = self.thetas_d * np.pi / 180
+        self.phis   = self.phis_d   * np.pi / 180
         self.max_phi_diff = self.max_theta_diff = 1e-9
         if pairwise is not None:
             tdiff = None
@@ -340,7 +359,7 @@ class Gain_Data:
                     pdiff = abs (a - b)
             self.max_phi_diff = pdiff
 
-        self.maxg = np.nanmax (gains)
+        self.maxg = np.nanmax (self.gains)
         idx = np.unravel_index (np.nanargmax (self.gains), self.gains.shape)
         self.theta_maxidx, self.phi_maxidx = idx
         # Special case: If theta is 0° or 180° recompute phi_maxidx
@@ -356,7 +375,7 @@ class Gain_Data:
         self.lbl_deg   = 0
         self.labels    = None
         self.pattern   = None
-    # end def compute
+    # end def compute_maxima
 
     def azimuth_gains (self, scaler):
         g  = self.gains [self.parent.theta_angle_idx]
@@ -588,10 +607,7 @@ class Gain_Plot:
     c_real = '#AE4141'
     c_imag = '#FFB329'
 
-    def __init__ \
-        ( self, args, gdata
-        , loaded_segs = None
-        ):
+    def __init__ (self, args, gdata, loaded_segs = None):
         self.args        = args
         self.dpi         = args.dpi
         # fix_x and fig_y are used for matplotlib only
@@ -1604,7 +1620,8 @@ class Gain_Plot:
             kmap = dict (yscale = 'l', all_axes = 'a')
             for k in kmap:
                 try:
-                    rcParams ['keymap.' + k].remove (kmap [k])
+                    if kmap [k] in rcParams ['keymap.' + k]:
+                        rcParams ['keymap.' + k].remove (kmap [k])
                 except KeyError:
                     pass
         if self.outfile:
