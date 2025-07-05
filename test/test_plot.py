@@ -412,7 +412,7 @@ class Test_Plot (unittest.TestCase):
     def test_measurement_full (self):
         infile = "test/Messdaten.csv"
         args = [ "--azi", "--polari=H", "--polari=V", "--polari=sum"
-               , "--matp", "--angle-ele=-27", "--round-ele=2", infile
+               , "--matp", "--angle-ele=-27", "--round-pos=2", infile
                ]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
@@ -421,7 +421,7 @@ class Test_Plot (unittest.TestCase):
     def test_measurement_full_plotly (self):
         infile = "test/Messdaten.csv"
         args = [ "--azi", "--polari=H", "--polari=V", "--polari=sum"
-               , "--matp", "--angle-ele=-27", "--round-ele=2", "-S", infile
+               , "--matp", "--angle-ele=-27", "--round-pos=2", "-S", infile
                ]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
