@@ -1478,7 +1478,11 @@ class Gain_Plot:
         self.gdata = dict ((g, gdata [g]) for g in gdata if len (gdata [g]) > 1)
     # end def read_file
 
-    def plot (self, key = None):
+    def plot (self, key = None, show_opt = None):
+        """ The option show_opt can be used for options to plot into a
+            jupyter notebook or similar. It is currently used only with
+            plotly.
+        """
         if key is None and self.gdata:
             key = next (iter (sorted (self.gdata)))
         self.plot_key = key
@@ -1487,14 +1491,14 @@ class Gain_Plot:
         if getattr (self.args, 'as_stl', None):
             self.plot3d_stl (key)
         elif self.do_plotly:
-            self.plot_plotly (key)
+            self.plot_plotly (key, show_opt)
         else:
             if self.args.mpl_pol_in_1:
                 self.mpl_plot_key = self.mpl_plot_keys [0]
             self.plot_matplotlib (key)
     # end def plot
 
-    def plot_plotly (self, key):
+    def plot_plotly (self, key, show_opt = None):
         m = {}
         for name in self.plot_names:
             if getattr (self.args, name, None):
@@ -1548,10 +1552,10 @@ class Gain_Plot:
                             self.data = self.gdata [key]
                             if key == self.plot_keys [-1]:
                                 self.plotly_lastfig = True
-                            method (name)
+                            method (name, show_opt)
                             self.plotly_firstfig = False
                     else:
-                        method (name)
+                        method (name, show_opt)
     # end def plot_plotly
 
     def plot_matplotlib (self, plotkey):
@@ -1634,7 +1638,7 @@ class Gain_Plot:
             plt.show ()
     # end def plot_matplotlib
 
-    def azimuth (self, name):
+    def azimuth (self, name, show_opt = None):
         if not getattr (self, 'data', None):
             raise ValueError ('No gain data to plot')
         self.desc = self.data.azimuth_text (self.scaler)
@@ -1657,10 +1661,10 @@ class Gain_Plot:
         # The unscaled values are not used by matplotlib, so no need to
         # keep multiple copies.
         self.unscaled   = self.unscaled   [indexes]
-        self.polarplot (name)
+        self.polarplot (name, show_opt = show_opt)
     # end def azimuth
 
-    def elevation (self, name):
+    def elevation (self, name, show_opt = None):
         """ Elevation is a little more complicated due to theta counting
             from zenith.
             OK for both 90° and 180° plots:
@@ -1696,15 +1700,15 @@ class Gain_Plot:
             self.angles = np.append \
                 (p2 - thetas, np.flip (p2 + thetas)) [indexes]
         self.unscaled   = self.unscaled   [indexes]
-        self.polarplot (name)
+        self.polarplot (name, show_opt = show_opt)
     # end def elevation
 
-    def polarplot (self, name):
+    def polarplot (self, name, show_opt):
         self.angle_name  = name [0].upper () + name [1:]
         if  (  getattr (self.args, 'export_html', None)
             or getattr (self.args, 'show_in_browser', None)
             ):
-            self.polarplot_plotly (name)
+            self.polarplot_plotly (name, show_opt)
         else:
             self.polarplot_matplotlib (name)
     # end def polarplot
@@ -1732,7 +1736,7 @@ class Gain_Plot:
                 });
             """
 
-    def polarplot_plotly (self, name):
+    def polarplot_plotly (self, name, show_opt):
         fig  = self.plotly_fig
         nm   = self.angle_name
         tpl  = 'Gain: %%{text}<br>%s: %%{theta}<extra></extra>' % nm
@@ -1791,7 +1795,7 @@ class Gain_Plot:
 #                    , font      = dict (size = 18)
 #                    )
             script = self.plotly_polar_script % locals ()
-            self.show_plotly (fig, name, script = script)
+            self.show_plotly (fig, name, script = script, show_opt = show_opt)
     # end def polarplot_plotly
 
     def polarplot_matplotlib (self, name):
@@ -1889,7 +1893,7 @@ class Gain_Plot:
                         }
                       );"""
 
-    def plot3d_plotly (self, name):
+    def plot3d_plotly (self, name, show_opt = None):
         t, gains, X, Y, Z = self.data.plot3d_gains (self.scaler)
         xr, yr, zr = self.scene_ranges ()
         fig  = self.plotly_fig
@@ -1969,7 +1973,8 @@ class Gain_Plot:
                     , zaxis = dict (range = zr, showticklabels = False)
                     )
                 )
-            self.show_plotly (fig, name, script = self.plotly_3d_script)
+            self.show_plotly \
+                (fig, name, script = self.plotly_3d_script, show_opt = show_opt)
     # end def plot3d_plotly
 
     def plot3d_stl (self, plotkey):
@@ -2134,7 +2139,7 @@ class Gain_Plot:
         self.fig.add_trace (go.Scatter (**d))
     # end def add_plotly_df
 
-    def plot_vswr_plotly (self, name):
+    def plot_vswr_plotly (self, name, show_opt = None):
         X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
         df = pd.DataFrame ()
         df ['Frequency'] = X
@@ -2205,7 +2210,7 @@ class Gain_Plot:
         c = self.args.swr_min_color
         if c and c.lower () != 'none':
             fig.add_vline (x = self.min_x, line_dash = "dash", line_color = c)
-        self.show_plotly (fig, name)
+        self.show_plotly (fig, name, show_opt = show_opt)
     # end def plot_vswr_plotly
 
     def scene_ranges (self, matrix = None, add_ground = False):
@@ -2249,7 +2254,7 @@ class Gain_Plot:
         return np.array ([xr, yr, zr])
     # end def scene_ranges
 
-    def plot_geo_plotly (self, name):
+    def plot_geo_plotly (self, name, show_opt = None):
         gidx = min (self.geo)
         xr, yr, zr = self.scene_ranges \
             (np.concatenate (self.geo [gidx]).T, self.geo [gidx].has_ground)
@@ -2291,7 +2296,7 @@ class Gain_Plot:
             d.update (opacity = 0.9)
             fig.add_trace (go.Surface (x = x, y = y, z = z, **d))
         fig.layout.legend = dict (itemsizing = 'constant')
-        self.show_plotly (fig, name)
+        self.show_plotly (fig, name, show_opt = show_opt)
     # end def plot_geo_plotly
 
     def plot_geo_matplotlib (self, name):
@@ -2328,7 +2333,7 @@ class Gain_Plot:
             ax.plot_surface (x, y, z, **d)
     # end def plot_geo_matplotlib
 
-    def plot_smith_plotly (self, name):
+    def plot_smith_plotly (self, name, show_opt = None):
         X, Y, real, imag, xabs, xphi, Z = self.prepare_vswr ()
         real_norm = real / self.args.system_impedance
         imag_norm = imag / self.args.system_impedance
@@ -2362,7 +2367,7 @@ class Gain_Plot:
             , showarrow = False
             )
         fig.layout.title.text = 'Smith chart for %s' % self.title
-        self.show_plotly (fig, name)
+        self.show_plotly (fig, name, show_opt = show_opt)
     # end def plot_smith_plotly
 
     def plot_smith_matplotlib (self, name):
@@ -2372,7 +2377,7 @@ class Gain_Plot:
         ax.plot (Z, **d)
     # end def plot_smith_matplotlib
 
-    def show_plotly (self, fig, name, script = None):
+    def show_plotly (self, fig, name, script = None, show_opt = None):
         """ We can pass a config option into fig.show and fig.write_html,
             allowing scroll seems to be the default for 3d view.
             At some point we may want to set different config options
@@ -2380,8 +2385,10 @@ class Gain_Plot:
             Note that the script is passed as post_script to the html.
             It is triggered after loading the figure.
         """
+        show_opt = show_opt or {}
         config = dict (displaylogo = False)
         d = {}
+        d.update (show_opt)
         if self.args.html_export_option and self.args.export_html:
             d.update (include_plotlyjs = self.args.html_export_option)
         if not self.args.show_plotly_logo:
