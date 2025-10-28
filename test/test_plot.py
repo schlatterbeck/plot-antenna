@@ -91,7 +91,7 @@ def hash_from_pic_obj (obj):
 
 def get_picture_hash (function_name):
     """ Get picture hash from picture file via the function name and
-        the current matplotlib version.
+        the current matplotlib/plotly version.
     """
     cs = []
     fn, pattern = pic_filename_and_glob (function_name)

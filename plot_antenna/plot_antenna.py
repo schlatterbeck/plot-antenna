@@ -2355,9 +2355,9 @@ class Gain_Plot:
             )
         fig.add_trace (smith)
         fig.update (self.plotly_smith_default)
-        fmt = '$Z_0 = %.1f\,\Omega$'
+        fmt = r'$Z_0 = %.1f\,\Omega$'
         if self.args.system_impedance == int (self.args.system_impedance):
-            fmt = '$Z_0 = %.0f\,\Omega$'
+            fmt = r'$Z_0 = %.0f\,\Omega$'
         fig.add_annotation \
             ( x         = 0.10
             , y         = 0.15
