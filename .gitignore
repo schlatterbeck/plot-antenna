@@ -1,6 +1,5 @@
 *.swp
 *.OUT
-*.out
 *.GNN
 *.gain
 *.CR
@@ -13,7 +12,6 @@
 *.blg
 *.dvi
 *.log
-*.out
 *.ppm
 VERSION
 README.html
