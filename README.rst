@@ -201,6 +201,28 @@ your own data with `plot-antenna`_. The eznec program in
 ``plot_antenna/eznec.py`` might even be better in this regard. See the
 next section on documentation of the `plot-antenna`_ API.
 
+Running the Tests
+-----------------
+
+For running the plotly tests, the ``kaleido`` python package needs to be
+installed. For Debian Trixie and earlier version 0.2.1 is needed. This
+is installed with pip as shown below, if you don't want to mess with the
+``--break-system-packages`` option, installing everything into a virtual
+environment is the way to go::
+
+    python3 -m pip install kaleido==0.2.1 --break-system-packages
+
+The tests use pictures saved in ``test/pics`` and will compare |--| depending
+on matplotlib or plotly version |--| the picture matching the backend
+version to the picture produced during the test. For this to work,
+especially for plotly, the correct fonts need to be installed. Plotly
+seems to prefer the Open Sans font family. So at least on Debian the
+package ``fonts-open-sans`` needs to be installed. Otherwise the tests
+fail because the pictures do not match. If a test fails a picture with
+the extension ``.debug`` will be produced in the directory ``test/pics``.
+If differences are not immediately visible, the ``compare`` program from
+imagemagick may help.
+
 Plot-Antenna API
 ----------------
 
