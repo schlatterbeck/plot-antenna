@@ -601,8 +601,7 @@ class Gain_Plot:
         , 'plot_vswr', 'plot3d', 'plot_geo', 'plot_smith'
         )
     update_names = set (('azimuth', 'elevation', 'plot3d'))
-    font_sans    = \
-        "Helvetica, Nimbus Sans, Liberation Sans, Open Sans, arial, sans-serif"
+    font_sans    = "Open Sans, verdana, arial, sans-serif"
     # Default colors for swr plot
     c_real = '#AE4141'
     c_imag = '#FFB329'
