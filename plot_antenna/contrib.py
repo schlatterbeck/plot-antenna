@@ -50,15 +50,18 @@ def parse_csv_measurement_data (args):
     """ Parses measurement data from CSV file
         This has the columns:
         - Messwert: The measurement
-          May also be called 'eirp'
+          May also be called 'eirp' or 'eirp (dBm)'
         - Einheit Messwert: Unit of the measurement (e.g. dBm)
           This can also be called "Einheit eirp"
+          Or we have a column 'eirp (dBm)' above and the column with the
+          unit is missing
         - Position Drehscheibe: Azimuth angle
+          also called Position Drehscheibe (deg)
         - Position Positionierer: Elevation angle
           also seen as Position Positioner
+          or Position Positioner (deg)
         - Polarisation: 'PH' for horizontal, 'PV' for vertical polarization
         - Messfrequenz: frequency
-        - Einheit Messfrequenz: unit of frequency
         For an example see test/Messdaten.csv
         The format has the following peculiarities:
         - The elevation angles slightly vary for a single azimuth scan.
@@ -81,11 +84,21 @@ def parse_csv_measurement_data (args):
     with open (args.filename, 'r') as f:
         dr = DictReader (f, delimiter = ';')
         for rec in dr:
+            for m in ('Einheit Messwert', 'Einheit eirp'):
+                try:
+                    args.dB_unit = rec [m]
+                    break
+                except KeyError:
+                    pass
+            else:
+                if 'eirp (dBm)' in rec:
+                    args.dB_unit = 'dBm'
+            # Frequency: The internal representation is in MHz, so we
+            # multiply by 1e3 because the values are in GHz.
             try:
-                args.dB_unit = rec ['Einheit Messwert']
+                f = float (rec ['Messfrequenz']) * 1e3
             except KeyError:
-                args.dB_unit = rec ['Einheit eirp']
-            f = float (rec ['Messfrequenz']) * 1e3 # MHz
+                f = float (rec ['Messfrequenz (GHz)']) * 1e3
             if f not in gdata_dict:
                 p = rec ['Polarisation'][1:]
                 k = (f, p)
@@ -93,15 +106,27 @@ def parse_csv_measurement_data (args):
                     gdata_dict [k] = aplot.Gain_Data \
                         (k, transform = coordinate_transform)
                 gdata = gdata_dict [k]
-            azi = ( float (rec ['Position Drehscheibe'])
-                  + args.turntable_offset
-                  ) % 360
+            for ds in ('Position Drehscheibe', 'Position Drehscheibe (deg)'):
+                try:
+                    azi = (float (rec [ds]) + args.turntable_offset) % 360
+                    break
+                except KeyError:
+                    pass
+            else:
+                raise ValueError ('No column "Position Drehscheibe"')
             # Need to round elevation values: these sometimes differ
             # during a scan
-            try:
-                ele = float (rec ['Position Positionierer'])
-            except KeyError:
-                ele = float (rec ['Position Positioner'])
+            p = ( 'Position Positionierer', 'Position Positioner'
+                , 'Position Positioner (deg)'
+                )
+            for k in p:
+                try:
+                    ele = float (rec [k])
+                    break
+                except KeyError:
+                    pass
+            else:
+                raise ValueError ('No column "Position Positioner"')
             if args.round_positioner:
                 rel = args.round_positioner
                 ele = round (ele / rel, 0) * rel
@@ -112,10 +137,14 @@ def parse_csv_measurement_data (args):
             # Probably needs conversion but we may get away with
             # allowing a unit to be specified for the plot, it must be a
             # dezibel value, though (not linear gain or so)
-            try:
-                gain = float (rec ['Messwert'])
-            except KeyError:
-                gain = float (rec ['eirp'])
+            for k in ('Messwert', 'eirp', 'eirp (dBm)'):
+                try:
+                    gain = float (rec [k])
+                    break
+                except KeyError:
+                    pass
+            else:
+                raise ValueError ('No column "eirp" or similar')
             gdata.pattern [(ele, azi)] = gain
     return gdata_dict
 # end def parse_csv_measurement_data
