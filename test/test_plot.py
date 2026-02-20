@@ -1,4 +1,4 @@
-# Copyright (C) 2022-25 Ralf Schlatterbeck. All rights reserved
+# Copyright (C) 2022-26 Ralf Schlatterbeck. All rights reserved
 # Reichergasse 131, A-3411 Weidling
 # ****************************************************************************
 #
@@ -30,10 +30,12 @@ from PIL import Image
 from bisect import bisect_left
 from plot_antenna.plot_antenna import main
 from plot_antenna.contrib import main_csv_measurement_data
+from plot_antenna.contrib import coordinate_transform
 from plot_antenna.eznec import main_eznec
 from io import BytesIO
 from glob import glob
 import matplotlib
+import numpy as np
 import plotly
 try:    
     from smithplot.smithaxes import SmithAxes
@@ -775,5 +777,65 @@ class Test_Plot (unittest.TestCase):
         main (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_scale_by_angle_plotly
+
+    def test_coordinate_transform_turntable (self):
+        """ Test coordinate transformation from positioner coordinates
+            as theta and turntable coordinates as phi to real theta/phi
+            coordinates.
+            This tests that the turntable coordinates (from 0 to 360)
+            are correctly transformed to theta angles (from 0 to 180)
+            and that the gain values at phi 0-180 are from turntable
+            angles 0-180 while gain values at phi 181-360 are from
+            turntable angles 360 - phi
+        """
+        phis_d   = np.arange (361)
+        thetas_d = np.arange (181)
+        gains    = np.meshgrid (phis_d, thetas_d) [0]
+        class gd:
+            pass
+        gd.phis_d   = phis_d
+        gd.thetas_d = thetas_d
+        gd.gains    = gains
+        coordinate_transform (gd)
+        assert gd.phis_d.shape   == (361,)
+        assert gd.thetas_d.shape == (181,)
+        t = (0, 45, 90, 135, 180)
+        p = range (180)
+        for t in (0, 45, 90, 135, 180):
+            assert (gd.gains [t][p] == t).all ()
+        p = range (181, 361)
+        for t in (0, 45, 90, 135, 180):
+            assert (gd.gains [t][p] == 360 - t).all ()
+    # end def test_coordinate_transform_turntable
+
+    def test_coordinate_transform_positioner (self):
+        """ Test coordinate transformation from positioner coordinates
+            as theta and turntable coordinates as phi to real theta/phi
+            coordinates.
+            This tests that the positioner coordinates (from 0 to 180)
+            are correctly transformed to phi angles (from 0 to 360)
+            and that the gain values at theta 0-180 are from positioner
+            angles 0-180 for phi angles <= 180 and from positioner
+            angles 180-0 for phi angles > 180
+        """
+        phis_d   = np.arange (361)
+        thetas_d = np.arange (181)
+        gains    = np.meshgrid (phis_d, thetas_d) [1]
+        class gd:
+            pass
+        gd.phis_d   = phis_d
+        gd.thetas_d = thetas_d
+        gd.gains    = gains
+        coordinate_transform (gd)
+        assert gd.phis_d.shape   == (361,)
+        assert gd.thetas_d.shape == (181,)
+
+        t = range (181)
+        for p in range (0, 365, 45):
+            if p in (180, 360):
+                assert (gd.gains [t, p] == 180).all ()
+            else:
+                assert (gd.gains [t, p] == p % 180).all ()
+    # end def test_coordinate_transform_positioner
 
 # end class Test_Plot

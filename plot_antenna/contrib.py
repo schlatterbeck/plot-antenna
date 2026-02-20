@@ -18,25 +18,23 @@ def coordinate_transform (gd):
     p = sorted (list (set (gd.thetas_d).union (gd.thetas_d + 180)))
     if p [-1] != 360.:
         p.append (360.)
-    otl = len (gd.thetas_d)
+    otl = gd.thetas_d.shape [0]
     if gd.thetas_d [otl - 1] != 180:
         otl += 1
     p   = np.array (p)
-    shp = gd.gains.shape
     ng  = np.zeros ((len (t), len (p)))
-    pl  = gd.phis_d.shape [0]
+    opl = gd.phis_d.shape [0]
     for nth, theta in enumerate (t):
         for nph, phi in enumerate (p):
             if phi <= 180:
                 oth = nph
+                oph = nth
             else:
-                oth = otl - (nph % (len (p) // 2)) - 1
-            oph = nth
-            if phi > 180:
-                oph = pl - nth - 1
+                oth = nph - (p.shape [0] // 2)
+                oph = opl - nth - 1
             if oth == gd.gains.shape [0]:
                 # This happens only when 180° is missing for positioner
-                ng [nth, nph] = gd.gains [0, pl - oph - 1]
+                ng [nth, nph] = gd.gains [0, opl - oph - 1]
             else:
                 ng [nth, nph] = gd.gains [oth, oph]
     gd.gains    = ng
@@ -108,7 +106,10 @@ def parse_csv_measurement_data (args):
                 gdata = gdata_dict [k]
             for ds in ('Position Drehscheibe', 'Position Drehscheibe (deg)'):
                 try:
-                    azi = (float (rec [ds]) + args.turntable_offset) % 360
+                    azi = float (rec [ds])
+                    if args.invert_turntable:
+                        azi = -azi
+                    azi = (azi + args.turntable_offset) % 360
                     break
                 except KeyError:
                     pass
@@ -122,6 +123,9 @@ def parse_csv_measurement_data (args):
             for k in p:
                 try:
                     ele = float (rec [k])
+                    if args.invert_positioner:
+                        ele = -ele
+                    ele %= 360
                     break
                 except KeyError:
                     pass
@@ -167,6 +171,17 @@ def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
         , help    = "Offset in degrees of the turntable, default=%(default)s"
         , type    = float
         , default = 0.0
+        )
+    cmd.add_argument \
+        ( '--do-not-invert-turntable'
+        , help    = "Invert turntable angles, default True"
+        , dest    = 'invert_turntable'
+        , action  = 'store_false'
+        )
+    cmd.add_argument \
+        ( '--invert-positioner'
+        , help    = "Invert positioner angles, default False"
+        , action  = 'store_true'
         )
     args = aplot.process_args (cmd, argv)
     # Set default polarization, we need this otherwise the sum isn't computed
