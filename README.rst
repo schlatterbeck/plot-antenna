@@ -333,6 +333,15 @@ the companion program for reading EZNEC data in
 Release Notes
 -------------
 
+v2.4: Bug-fixes, coordinate transformation
+
+- Fix max theta gain computation: We need to take *both sides of phi*
+  into account
+- Allow to directly pass numpy arrays in API
+- Coordinate transform for a contributed setup for a measurement device
+- Update tests for debian trixie, in particular use better font defaults
+  that are more likely to be the same on multiple architectures
+
 v2.3: Fix nec geo computation
 
 - Fix a bug when parsing NEC geo info, in particular back-references in
