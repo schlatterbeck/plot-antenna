@@ -173,10 +173,9 @@ def main_csv_measurement_data (argv = sys.argv [1:], pic_io = None):
         , default = 0.0
         )
     cmd.add_argument \
-        ( '--do-not-invert-turntable'
-        , help    = "Invert turntable angles, default True"
-        , dest    = 'invert_turntable'
-        , action  = 'store_false'
+        ( '--invert-turntable'
+        , help    = "Invert turntable angles, default False"
+        , action  = 'store_true'
         )
     cmd.add_argument \
         ( '--invert-positioner'

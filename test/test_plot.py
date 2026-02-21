@@ -94,26 +94,32 @@ def hash_from_pic_obj (obj):
 def get_picture_hash (function_name):
     """ Get picture hash from picture file via the function name and
         the current matplotlib/plotly version.
+        Sometimes a version (notably matplotlib 3.6.3) produces the same
+        output as a previous version (matplotlib 3.5.2) where the
+        conditions are still unclear. If we find a version exactly we
+        also compare to the previous version.
     """
-    cs = []
+    cs = set ()
     fn, pattern = pic_filename_and_glob (function_name)
     try:
-        cs.append (hash_from_pic_obj (fn))
+        cs.add (hash_from_pic_obj (fn))
     except FileNotFoundError:
         pass
-    if not cs:
-        versions = list (sorted (glob (pattern)))
-        idx = bisect_left (versions, fn)
-        l   = len (versions)
-        if not l:
-            globfn = []
-        elif idx >= l - 1:
-            globfn = versions [l-2:]
-        else:
-            globfn = versions [idx:idx+2]
-        for name in globfn:
-            cs.append (hash_from_pic_obj (name))
-    return cs
+    versions = list (sorted (glob (pattern)))
+    idx = bisect_left (versions, fn)
+    # If we found the version exactly, we add *earlier* version
+    if cs and idx > 0:
+        idx = idx - 1
+    l = len (versions)
+    if not l:
+        globfn = []
+    elif idx >= l - 1:
+        globfn = versions [l-2:]
+    else:
+        globfn = versions [idx:idx+2]
+    for name in globfn:
+        cs.add (hash_from_pic_obj (name))
+    return list (cs)
 # end def get_picture_hash
 
 def check_status_matplotlib (v):
@@ -399,14 +405,14 @@ class Test_Plot (unittest.TestCase):
 
     def test_measurement (self):
         infile = "test/Messdaten.csv"
-        args = ["--ele", "--polari=H", "--do-not", infile]
+        args = ["--ele", "--polari=H", infile]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_measurement
 
     def test_measurement_plotly (self):
         infile = "test/Messdaten.csv"
-        args = ["--ele", "--polari=H", "-S", '--do-not', infile]
+        args = ["--ele", "--polari=H", "-S", infile]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
     # end def test_measurement_plotly
@@ -414,8 +420,7 @@ class Test_Plot (unittest.TestCase):
     def test_measurement_full (self):
         infile = "test/Messdaten.csv"
         args = [ "--azi", "--polari=H", "--polari=V", "--polari=sum"
-               , "--matp", "--angle-ele=-27", "--round-pos=2"
-               , "--do-not", infile
+               , "--matp", "--angle-ele=-27", "--round-pos=2", infile
                ]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
@@ -424,8 +429,7 @@ class Test_Plot (unittest.TestCase):
     def test_measurement_full_plotly (self):
         infile = "test/Messdaten.csv"
         args = [ "--azi", "--polari=H", "--polari=V", "--polari=sum"
-               , "--matp", "--angle-ele=-27", "--round-pos=2", "-S"
-               , "--do-not", infile
+               , "--matp", "--angle-ele=-27", "--round-pos=2", "-S", infile
                ]
         main_csv_measurement_data (args, pic_io = self.pic_io)
         self.compare_cs ()
